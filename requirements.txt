@@ -1,0 +1,7 @@
+streamlit
+pandas
+langchain-openai
+langchain-core
+python-dotenv
+typing
+pathlib
