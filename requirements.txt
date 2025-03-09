@@ -2,6 +2,11 @@ streamlit
 pandas
 langchain-openai
 langchain-core
+langchain-community
+python-docx
 python-dotenv
+docx2txt
+pypdf
 typing
 pathlib
+datetime

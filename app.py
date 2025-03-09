@@ -20,9 +20,9 @@ logging.basicConfig(
 
 # Konfiguracja modelu
 MODEL_CONFIG = {
-    "model_name": "gpt-3.5-turbo",
+    "model_name": "gpt-4o",
     "temperature": 0.0,
-    "max_tokens": 1000
+    "max_tokens": 4000
 }
 
 # Inicjalizacja modelu OpenAI
@@ -112,21 +112,96 @@ st.title("KoREKtor - narzędzie dostępnej rekrutacji")
 
   # Tworzenie dwóch kolumn
 left_col, right_col = st.columns([1, 1])
+from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader
+import os
 
-  # Lewa kolumna z polem tekstowym
+def read_document(file, file_type):
+    # Zapisujemy plik tymczasowo
+    with open(f"temp.{file_type}", "wb") as f:
+        f.write(file.getvalue())
+    
+    # Używamy odpowiedniego loadera
+    if file_type == "pdf":
+        loader = PyPDFLoader(f"temp.{file_type}")
+    else:
+        loader = Docx2txtLoader(f"temp.{file_type}")
+    
+    # Wczytujemy dokumenty i łączymy tekst
+    documents = loader.load()
+    text_content = "\n".join([doc.page_content for doc in documents])
+    
+    # Usuwamy plik tymczasowy
+    os.remove(f"temp.{file_type}")
+    
+    return text_content
+
+# Lewa kolumna z polem tekstowym
 with left_col:
-      job_ad = st.text_area("Wklej treść ogłoszenia o pracę", height=500)
-      analyze_button = st.button("Analizuj ogłoszenie", help="Kliknij, aby przeanalizować treść ogłoszenia")
-      clear_button = st.button("Wyczyść", help="Kliknij, aby wyczyścić pole tekstowe")
+    uploaded_file = st.file_uploader("Wczytaj plik (DOCX lub PDF)", type=['docx', 'pdf'])
+    
+    if uploaded_file:
+        file_type = "pdf" if uploaded_file.type == "application/pdf" else "docx"
+        text_content = read_document(uploaded_file, file_type)
+        job_ad = st.text_area("Wklej treść ogłoszenia o pracę", value=text_content, height=500)
+    else:
+        job_ad = st.text_area("Wklej treść ogłoszenia o pracę", height=500)
+        
+    analyze_button = st.button("Analizuj ogłoszenie", help="Kliknij, aby przeanalizować treść ogłoszenia")
+from docx import Document
+from docx.shared import Pt, RGBColor
+from io import BytesIO
+from datetime import datetime
 
-  # Prawa kolumna z tabelą wyników
+def create_report(analysis_results: dict) -> BytesIO:
+      doc = Document()
+    
+      # Tytuł raportu
+      doc.add_heading('Raport analizy ogłoszenia o pracę', 0)
+    
+      # Data wygenerowania
+      doc.add_paragraph(f'Data wygenerowania: {datetime.now().strftime("%Y-%m-%d %H:%M")}')
+      doc.add_paragraph('\n')
+    
+      # Dodanie wyników analizy
+      for area, details in analysis_results.items():
+          # Dodaj nagłówek sekcji
+          heading = doc.add_heading(level=1)
+          heading_run = heading.add_run(area)
+          heading_run.font.size = Pt(14)
+        
+          # Dodaj szczegóły
+          status = "✓" if details["opis"] == "TAK" else "✗"
+          p = doc.add_paragraph()
+          p.add_run(f'{status} ').bold = True
+          p.add_run(details["komentarz"])
+        
+          # Dodaj odstęp
+          doc.add_paragraph('\n')
+    
+      # Zapisz do BytesIO
+      doc_io = BytesIO()
+      doc.save(doc_io)
+      doc_io.seek(0)
+      return doc_io
+
+clear_button = st.button("Wyczyść", help="Kliknij, aby wyczyścić pole tekstowe")
+
+  # Prawa kolumna z wynikami
 with right_col:
       if analyze_button and job_ad:
-          st.markdown("""
-          | Obszar | Status | Komentarz |
-          |--------|--------|-----------|
-          | Otwartość na zatrudnianie | ✅ | Firma zachęca do aplikowania |
-          | Dostępność | ❌ | Brak informacji o dostępności |
-          | Benefity | ✅ | Wymienione świadczenia |
-          | Polityka różnorodności | ✅ | Wspomniana polityka D&I |
-          """)
+          result = analyze_job_ad(job_ad)
+          if isinstance(result, dict):
+              for area, details in result.items():
+                  st.header(area)
+                  status = "✅" if details["opis"] == "TAK" else "❌"
+                  st.write(f"{status} {details['komentarz']}")
+                  st.divider()
+            
+              # Przycisk do pobrania raportu
+              report_doc = create_report(result)
+              st.download_button(
+                  label="Pobierz raport DOCX",
+                  data=report_doc,
+                  file_name="raport_analizy.docx",
+                  mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              )
