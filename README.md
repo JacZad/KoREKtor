@@ -2,6 +2,8 @@
 
 KoREKtor to aplikacja webowa stworzona w Streamlit, która pomaga analizować ogłoszenia o pracę pod kątem dostępności dla osób z niepełnosprawnościami.
 
+[Demo aplikacji](https://ko-rektor.streamlit.app/)
+
 ## Funkcjonalności
 
 - Analiza treści ogłoszeń o pracę z wykorzystaniem AI (GPT-3.5)
@@ -27,9 +29,20 @@ KoREKtor to aplikacja webowa stworzona w Streamlit, która pomaga analizować og
 
 - Python 3.x
 - Streamlit - framework do tworzenia aplikacji webowych
-- LangChain - integracja z modelami językowymi
-- OpenAI GPT-3.5 - model językowy do analizy treści
+- LangChain - integracja z modelami językowymi (langchain-openai, langchain-core, langchain-community)
+- OpenAI GPT-4 - model językowy do analizy treści
 - Pandas - obsługa danych
+- python-docx - obsługa plików DOCX
+- Obsługa plików PDF
+
+## Funkcjonalności
+
+- Analiza treści ogłoszeń o pracę z wykorzystaniem AI (GPT-4)
+- Możliwość wczytywania plików DOCX i PDF
+- Generowanie raportów w formacie DOCX
+- Ocena 11 kluczowych obszarów dostępności
+- Generowanie szczegółowych raportów z komentarzami
+- Intuicyjny interfejs z podziałem na dwie kolumny
 
 ## Instalacja
 
@@ -38,6 +51,11 @@ KoREKtor to aplikacja webowa stworzona w Streamlit, która pomaga analizować og
 git clone https://github.com/JacZad/KoREKtor.git
 ```
 
+Aby zainstalować zaktualizowane zależności, należy wykonać:
+
+```bash
+pip install -r requirements.txt
+```
 2. Zainstaluj wymagane zależności:
 ```bash
 pip install -r requirements.txt
