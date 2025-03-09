@@ -2,7 +2,7 @@
 
 KoREKtor to aplikacja webowa stworzona w Streamlit, która pomaga analizować ogłoszenia o pracę pod kątem dostępności dla osób z niepełnosprawnościami.
 
-[Demo aplikacji](https://ko-rektor.streamlit.app/)
+[Demo aplikacji](https://korektor-kjscjtlchx289a2bpkywdd.streamlit.app/)
 
 ## Funkcjonalności
 
