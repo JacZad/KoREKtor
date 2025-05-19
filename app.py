@@ -75,7 +75,12 @@ def create_report(result: pd.DataFrame) -> str:
             for line in str(row['more']).split('\n'):
                 if line.strip():
                     doc.add_paragraph(line)
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
+    
+    # Użycie prefix dla nazwy pliku zaczynającej się od "KoREKtor_"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    prefix = f"KoREKtor_{timestamp}_"
+    
+    with tempfile.NamedTemporaryFile(delete=False, prefix=prefix, suffix=".docx") as tmp:
         doc.save(tmp.name)
         return tmp.name  # Zwracamy ścieżkę do pliku tymczasowego
 
