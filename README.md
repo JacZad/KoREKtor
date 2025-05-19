@@ -22,14 +22,23 @@ KoREKtor to narzędzie wykorzystujące sztuczną inteligencję do analizy ogłos
 
 ![Belka z logotypami](belka.png)
 
-
 ## Funkcjonalności
 
-
-- Analiza tekstu ogłoszenia o pracę
+- Analiza tekstu ogłoszenia o pracę pod kątem dostępności
 - Automatyczna ocena 16 różnych obszarów dostępności
-- Generowanie szczegółowych rekomendacji
-- Wskazywanie cytatów uzasadniających ocenę
+- Generowanie szczegółowych rekomendacji dla rekruterów
+- Wskazywanie cytatów z ogłoszenia uzasadniających ocenę
+- Obsługa różnych formatów plików (TXT, DOCX, PDF)
+- Interfejs użytkownika oparty na Gradio
+
+## Jak to działa?
+
+KoREKtor wykorzystuje modele językowe OpenAI do analizy treści ogłoszeń o pracę. Aplikacja sprawdza, czy ogłoszenie spełnia kryteria dostępności dla osób z niepełnosprawnościami zgodnie z opracowaną matrycą oceny. Dla każdego kryterium system generuje:
+
+1. Ocenę (TAK/NIE)
+2. Cytat z ogłoszenia uzasadniający ocenę
+3. Konkretne rekomendacje poprawy
+4. Dodatkowe informacje i wskazówki
 
 ## Wymagania
 
@@ -41,7 +50,8 @@ KoREKtor to narzędzie wykorzystujące sztuczną inteligencję do analizy ogłos
 
 1. Sklonuj repozytorium:
 ```bash
-git clone https://huggingface.co/spaces/jaczad/Rekruter
+git clone https://github.com/jaczad/korektor.git
+cd korektor
 ```
 
 2. Zainstaluj wymagane zależności:
@@ -61,15 +71,17 @@ export OPENAI_API_KEY='twój-klucz-api'
 python app.py
 ```
 
-2. Otwórz przeglądarkę i przejdź pod wskazany adres
-3. Wklej tekst ogłoszenia o pracę do pola tekstowego
+2. Otwórz przeglądarkę i przejdź pod wskazany adres (domyślnie http://127.0.0.1:7860)
+3. Wklej tekst ogłoszenia o pracę do pola tekstowego lub prześlij plik
 4. Kliknij "Submit" aby otrzymać analizę
 
 ## Struktura projektu
 
-- `app.py` - główny plik aplikacji
+- `app.py` - główny plik aplikacji z interfejsem Gradio
 - `matryca.csv` - plik zawierający matrycę pytań i kryteriów oceny
 - `requirements.txt` - lista wymaganych bibliotek
+- `logo-korektor.png` - logo projektu
+- `belka.png` - grafika z logotypami
 
 ## Model danych
 
@@ -85,5 +97,18 @@ Wynik zwracany jest w formacie JSON zawierającym:
 - Cytat z tekstu
 - Rekomendacje
 - Dodatkowe informacje
+
+## Wersja online
+
+<!-- Aplikacja jest również dostępna online na platformie [Deklaracja-dostepnosci.info](https://deklaracja-dostepnosci.info/korektor)
+
+
+## Współpraca i rozwój
+
+Zachęcamy do zgłaszania uwag i propozycji ulepszeń poprzez system Issues na GitHubie.
+
+## Licencja
+
+Ten projekt jest udostępniany na licencji [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 [Polityka prywatności](polityka.md)
