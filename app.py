@@ -1,214 +1,136 @@
-import streamlit as st
+import gradio as gr
 import pandas as pd
-import os
-from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.runnables import RunnablePassthrough
-from typing import Optional, Union
-import json
-from pathlib import Path
-import logging
-from functools import lru_cache
-
-# Konfiguracja logowania
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    filename='app.log'
-)
-
-# Konfiguracja modelu
-MODEL_CONFIG = {
-    "model_name": "gpt-4o",
-    "temperature": 0.0,
-    "max_tokens": 4000
-}
-
-# Inicjalizacja modelu OpenAI
-openai_model = ChatOpenAI(
-    model_name=MODEL_CONFIG["model_name"], 
-    temperature=MODEL_CONFIG["temperature"],
-    api_key=os.getenv("OPENAI_API_KEY")
-)
-
-# Definicja szablonu promptu
-matrix_prompt = PromptTemplate(
-    input_variables=["job_ad"],
-    template=(
-        "Przeanalizuj poniższe ogłoszenie o pracę pod kątem dostępności dla osób z niepełnosprawnościami. "
-        "Na podstawie poniższych pytań udziel odpowiedzi, używając formatu JSON, gdzie dla każdego obszaru podajesz odpowiedzi na pytania cząstkowe.\n\n"
-        "Pytania:\n\n"
-        "1. Wymagane kwalifikacje/doświadczenie:\n"
-        "   a) Czy szczegółowo opisano wymagane kwalifikacje i doświadczenie?\n"
-        "   b) Czy opis umożliwia ocenę, które wymagania są niezbędne, a które dodatkowym atutem?\n\n"
-        "2. Zadania na stanowisku pracy:\n"
-        "   a) Czy szczegółowo opisano zadania na stanowisku pracy?\n\n"
-        "3. Wynagrodzenie:\n"
-        "   a) Czy wskazano możliwą wysokość wynagrodzenia lub widełki?\n\n"
-        "4. Proces aplikowania - szczególne potrzeby:\n"
-        "   a) Czy zawarto informację o możliwości zgłoszenia szczególnych potrzeb na etapie rekrutacji?\n"
-        "   b) Czy uwzględniono możliwość rekrutacji online?\n\n"
-        "5. Onboarding/wdrażanie:\n"
-        "   a) Czy opisano sposób wdrożenia nowego pracownika do zespołu?\n\n"
-        "6. Rozwój - podnoszenie kwalifikacji:\n"
-        "   a) Czy umieszczono informację o możliwościach podnoszenia kwalifikacji (np. szkolenia, kursy)?\n\n"
-        "7. Rozwój - ścieżka awansu:\n"
-        "   a) Czy wskazano możliwą ścieżkę awansu lub informację o braku takiej możliwości?\n\n"
-        "8. Otwartość na zatrudnianie osób z niepełnosprawnościami:\n"
-        "   a) Czy zawarto informację, że firma zatrudnia już osoby z niepełnosprawnościami?\n"
-        "   b) Czy zachęcono osoby z niepełnosprawnościami do aplikowania?\n"
-        "   c) Czy nie stawiano wymogu posiadania orzeczenia?\n\n"
-        "9. Dostępność:\n"
-        "   a) Czy podano informacje o dostępności miejsca pracy (budynku i otoczenia)?\n"
-        "   b) Czy opisano dostępność stanowiska pracy?\n\n"
-        "10. Benefity:\n"
-        "    a) Czy zawarto informacje o benefitach oferowanych przez pracodawcę?\n\n"
-        "11. Polityka/strategia różnorodności:\n"
-        "    a) Czy uwzględniono informacje o polityce lub strategii różnorodności?\n\n"
-        "Treść ogłoszenia:\n{job_ad}\n\n"
-        "Proszę odpowiedz w poniższym formacie (każdy klucz to nazwa obszaru):\n"
-        "{{\n"
-        '  "Wymagane kwalifikacje/doświadczenie": {{\n'
-        '      "a": {{\n'
-        '          "odpowiedz": "TAK" lub "NIE",\n'
-        '          "komentarz": "krótki komentarz"\n'
-        '      }},\n'
-        '      "b": {{\n'
-        '          "odpowiedz": "TAK" lub "NIE",\n'
-        '          "komentarz": "krótki komentarz"\n'
-        '      }}\n'
-        '  }},\n'
-        "  ...\n"
-        "}}"    )
-)
-
-# Inicjalizacja parsera JSON i łańcucha przetwarzania
-json_parser = JsonOutputParser()
-chain = {
-    "job_ad": RunnablePassthrough()
-} | matrix_prompt | openai_model | json_parser
-
-def validate_input(content: str) -> bool:
-    """Sprawdza poprawność wprowadzonych danych"""
-    return bool(content and len(content.strip()) > 10)
-
-@lru_cache(maxsize=100)
-def analyze_job_ad(text: str) -> str:
-    """Analizuje ogłoszenie o pracę i zwraca wyniki w formacie JSON"""
-    content = text.strip() if text else ""
-    
-    # Walidacja zawartości
-    if not content:
-        return "⚠️ Nie podano treści ogłoszenia do analizy."
-    
-    if not validate_input(content):
-        return "⚠️ Wprowadzona treść jest zbyt krótka."
-    
-    # Analiza treści
-    try:
-        result = chain.invoke({"job_ad": content})
-        return result
-    except Exception as e:
-        logging.error(f"Błąd analizy: {e}")
-        return f"Wystąpił błąd podczas analizy: {str(e)}"
-
-st.title("KoREKtor - narzędzie dostępnej rekrutacji")
-
-# Tworzenie dwóch kolumn
-left_col, right_col = st.columns([1, 1])
+from langchain_openai import ChatOpenAI
+from langchain_core.output_parsers import StrOutputParser
+from pydantic import BaseModel, Field, field_validator
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader
-import os
-
-def read_document(file, file_type):
-    # Zapisujemy plik tymczasowo
-    with open(f"temp.{file_type}", "wb") as f:
-        f.write(file.getvalue())
-    
-    # Używamy odpowiedniego loadera
-    if file_type == "pdf":
-        loader = PyPDFLoader(f"temp.{file_type}")
-    else:
-        loader = Docx2txtLoader(f"temp.{file_type}")
-    
-    # Wczytujemy dokumenty i łączymy tekst
-    documents = loader.load()
-    text_content = "\n".join([doc.page_content for doc in documents])
-    
-    # Usuwamy plik tymczasowy
-    os.remove(f"temp.{file_type}")
-    
-    return text_content
-
-# Lewa kolumna z polem tekstowym
-with left_col:
-    uploaded_file = st.file_uploader("Wczytaj plik (DOCX lub PDF)", type=['docx', 'pdf'])
-    
-    if uploaded_file:
-        file_type = "pdf" if uploaded_file.type == "application/pdf" else "docx"
-        text_content = read_document(uploaded_file, file_type)
-        job_ad = st.text_area("Wklej treść ogłoszenia o pracę", value=text_content, height=500)
-    else:
-        job_ad = st.text_area("Wklej treść ogłoszenia o pracę", height=500)
-        
-    analyze_button = st.button("Analizuj ogłoszenie", help="Kliknij, aby przeanalizować treść ogłoszenia")
-    clear_button = st.button("Wyczyść", help="Kliknij, aby wyczyścić pole tekstowe")
-
+from langchain.output_parsers import PydanticOutputParser
 from docx import Document
-from docx.shared import Pt, RGBColor
-from io import BytesIO
 from datetime import datetime
+import os
+import tempfile
 
-def create_report(analysis_results: dict) -> BytesIO:
-    doc = Document()
-    
-    # Tytuł raportu
+# Model danych
+class QuestionAnswer(BaseModel):
+    question_number: int = Field(..., description="Numer pytania")
+    answer: str = Field(..., description="Odpowiedź, tylko TAK lub NIE")
+    citation: str = Field(..., description="Fragment cytatu")
+
+    @field_validator("answer")
+    def validate_answer(cls, v):
+        if v not in {"TAK", "NIE"}:
+            raise ValueError("Odpowiedź musi być TAK lub NIE")
+        return v
+
+class JobAdAnalysis(BaseModel):
+    answers: list[QuestionAnswer]
+
+parser = PydanticOutputParser(pydantic_object=JobAdAnalysis)
+
+# Wczytanie matrycy danych
+matryca_df = pd.read_csv('matryca.csv', header=None,
+                         names=['area', 'prompt', 'true', 'false', 'more', 'hint'])
+
+question_to_area_map = {}
+
+def prepare_questions(df):
+    global question_to_area_map
+    question_to_area_map = {}
+    questions_text = ""
+    for index, row in df.iterrows():
+        question_number = index + 1
+        questions_text += f"{question_number} {row['prompt']}\n"
+        question_to_area_map[question_number] = {
+            'area': row['area'],
+            'true': row['true'],
+            'false': row['false'],
+            'hint': row['hint'],
+            'more': row['more']
+        }
+    return questions_text
+
+def doc_to_text(file):
+    extension = os.path.splitext(file.name)[1].lower()
+    if extension == ".docx":
+        loader = Docx2txtLoader(file.name)
+    elif extension == ".pdf":
+        loader = PyPDFLoader(file.name)
+    else:
+        return "error"
+    pages = loader.load()
+    return "\n".join(page.page_content for page in pages)
+
+def create_report(result: pd.DataFrame) -> str:
+    doc = Document('template.docx')
     doc.add_heading('Raport analizy ogłoszenia o pracę', 0)
-    
-    # Data wygenerowania
-    doc.add_paragraph(f'Data wygenerowania: {datetime.now().strftime("%Y-%m-%d %H:%M")}')
-    doc.add_paragraph('\n')
-    
-    # Dodanie wyników analizy
-    for area, questions in analysis_results.items():
-        # Dodaj nagłówek sekcji
-        heading = doc.add_heading(level=1)
-        heading_run = heading.add_run(area)
-        heading_run.font.size = Pt(14)
-        
-        # Dodaj szczegóły dla każdego pytania cząstkowego
-        for question_key, details in questions.items():
-            status = "✓" if details["odpowiedz"] == "TAK" else "✗"
-            p = doc.add_paragraph()
-            p.add_run(f'{question_key}) {status} ').bold = True
-            p.add_run(details["komentarz"])
-        
-        # Dodaj odstęp
-        doc.add_paragraph('\n')
-    
-    # Zapisz do BytesIO
-    doc_io = BytesIO()
-    doc.save(doc_io)
-    doc_io.seek(0)
-    return doc_io
+    doc.add_paragraph(f'Data wygenerowania: {datetime.now().strftime("%d.%m.%Y %H:%M")}')
+    for _, row in result.iterrows():
+        doc.add_heading(str(row['area']), 1)
+        doc.add_paragraph(str(row['citation']), style='Intense Quote')
+        for line in str(row['content']).split('\n'):
+            if line.strip():
+                doc.add_paragraph(line)
+        if pd.notna(row['more']):
+            for line in str(row['more']).split('\n'):
+                if line.strip():
+                    doc.add_paragraph(line)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
+        doc.save(tmp.name)
+        return tmp.name  # Zwracamy ścieżkę do pliku tymczasowego
 
-# Prawa kolumna z wynikami
-with right_col:
-    if analyze_button and job_ad:
-        result = analyze_job_ad(job_ad)
-        if isinstance(result, dict):
-            for area, questions in result.items():
-                st.header(area)
-                for question_key, details in questions.items():
-                    status = "✅" if details["odpowiedz"] == "TAK" else "❌"
-                    st.write(f"{question_key}) {status} {details['komentarz']}")
-                st.divider()
-            
-            # Przycisk do pobrania raportu
-            report_doc = create_report(result)
-            st.download_button(
-                label="Pobierz raport DOCX",
-                data=report_doc,
-                file_name="raport_analizy.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
+def analyze_job_ad(job_ad, file):
+    if file:
+        job_ad = doc_to_text(file)
+        if job_ad == "error":
+            return None, None
+    questions = prepare_questions(matryca_df)
+    prompt_template = PromptTemplate.from_template(
+        """Przeanalizuj poniższe ogłoszenie o pracę pod kątem dostępności dla osób z niepełnosprawnościami.
+
+        Ogłoszenie:
+        {job_ad}
+
+        Odpowiedz na następujące pytania:
+        {questions}
+
+        Format odpowiedzi powinien być w następującej strukturze JSON:
+        {{
+          "answers": [
+            {{
+              "question_number": 1,
+              "answer": "TAK/NIE",
+              "citation": "dokładny cytat z tekstu"
+            }}
+          ]
+        }}
+        """
+    )
+
+    model = ChatOpenAI(temperature=0, model="gpt-4o-mini")
+    chain = prompt_template | model | parser
+    response = chain.invoke({"job_ad": job_ad, "questions": questions})
+
+    output_df = pd.DataFrame(columns=['area', 'answer', 'citation', 'content', 'more'])
+    for i in range(16):
+        if response.answers[i].answer in {"TAK", "NIE"}:
+            new_row = {
+                'area': matryca_df.area[i],
+                'answer': response.answers[i].answer,
+                'citation': response.answers[i].citation,
+                'content': matryca_df.true[i] if response.answers[i].answer == 'TAK' else matryca_df.false[i],
+                'more': matryca_df.more[i]
+            }
+            output_df = pd.concat([output_df, pd.DataFrame([new_row])], ignore_index=True)
+
+    word_file_path = create_report(output_df)
+    json_output = output_df.to_dict(orient="records")
+    return json_output, word_file_path
+
+# Interfejs Gradio
+demo = gr.Interface(
+    fn=analyze_job_ad,
+    inputs=[gr.TextArea(label="Ogłoszenie (opcjonalnie)"), gr.File(label="Plik PDF lub DOCX")],
+    outputs=[gr.JSON(label="Wyniki analizy"), gr.File(label="Pobierz raport w formacie Word")],
+    title="KoREKtor – analiza ogłoszenia",
+).launch()

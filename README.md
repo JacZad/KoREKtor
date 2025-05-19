@@ -1,61 +1,49 @@
-# KoREKtor - narzędzie dostępnej rekrutacji
+---
+title: KoREKtor
+emoji: 👀
+colorFrom: yellow
+colorTo: green
+sdk: gradio
+sdk_version: 5.24.0
+app_file: app.py
+pinned: false
+---
 
-KoREKtor to aplikacja webowa stworzona w Streamlit, która pomaga analizować ogłoszenia o pracę pod kątem dostępności dla osób z niepełnosprawnościami.
+# KoREKtor - Analizator Ogłoszeń o Pracę
 
-[Demo aplikacji](https://korektor-kjscjtlchx289a2bpkywdd.streamlit.app/)
+![Logo KoREKtora](logo-korektor.png)
 
-## Funkcjonalności
+KoREKtor to narzędzie wykorzystujące sztuczną inteligencję do analizy ogłoszeń o pracę pod kątem dostępności dla osób z niepełnosprawnościami.
 
-- Analiza treści ogłoszeń o pracę z wykorzystaniem AI (GPT-3.5)
-- Ocena 11 kluczowych obszarów dostępności
-- Generowanie szczegółowych raportów z komentarzami
-- Intuicyjny interfejs z podziałem na dwie kolumny
+## Do autorstwa przyznają się:
 
-## Analizowane obszary
+- [Agata Gawska](https://www.linkedin.com/in/agata-gawska-b74506205/) - ogólna koncepcja, opracowanie matrycy, schematu działania i przeprowadzenie testów.
+- [Jacek Zadrożny](https://linkedin.com/in/jaczad) - programowanie, dobór technologii, wdrażanie, dokumentacja.
 
-1. Wymagane kwalifikacje/doświadczenie
-2. Zadania na stanowisku pracy 
-3. Wynagrodzenie
-4. Proces aplikowania
-5. Onboarding/wdrażanie
-6. Rozwój - podnoszenie kwalifikacji
-7. Rozwój - ścieżka awansu
-8. Otwartość na zatrudnianie osób z niepełnosprawnościami
-9. Dostępność miejsca i stanowiska pracy
-10. Benefity
-11. Polityka/strategia różnorodności
+![Belka z logotypami](belka.png)
 
-## Technologie
-
-- Python 3.x
-- Streamlit - framework do tworzenia aplikacji webowych
-- LangChain - integracja z modelami językowymi (langchain-openai, langchain-core, langchain-community)
-- OpenAI GPT-4 - model językowy do analizy treści
-- Pandas - obsługa danych
-- python-docx - obsługa plików DOCX
-- Obsługa plików PDF
 
 ## Funkcjonalności
 
-- Analiza treści ogłoszeń o pracę z wykorzystaniem AI (GPT-4)
-- Możliwość wczytywania plików DOCX i PDF
-- Generowanie raportów w formacie DOCX
-- Ocena 11 kluczowych obszarów dostępności
-- Generowanie szczegółowych raportów z komentarzami
-- Intuicyjny interfejs z podziałem na dwie kolumny
+
+- Analiza tekstu ogłoszenia o pracę
+- Automatyczna ocena 16 różnych obszarów dostępności
+- Generowanie szczegółowych rekomendacji
+- Wskazywanie cytatów uzasadniających ocenę
+
+## Wymagania
+
+- Python 3.8+
+- Zainstalowane zależności z pliku requirements.txt
+- Klucz API OpenAI
 
 ## Instalacja
 
 1. Sklonuj repozytorium:
 ```bash
-git clone https://github.com/JacZad/KoREKtor.git
+git clone https://huggingface.co/spaces/jaczad/Rekruter
 ```
 
-Aby zainstalować zaktualizowane zależności, należy wykonać:
-
-```bash
-pip install -r requirements.txt
-```
 2. Zainstaluj wymagane zależności:
 ```bash
 pip install -r requirements.txt
@@ -66,30 +54,36 @@ pip install -r requirements.txt
 export OPENAI_API_KEY='twój-klucz-api'
 ```
 
-4. Uruchom aplikację:
-```bash
-streamlit run app.py
-```
-
 ## Użycie
 
-1. Wklej treść ogłoszenia o pracę w pole tekstowe po lewej stronie
-2. Kliknij przycisk "Analizuj ogłoszenie"
-3. Zobacz wyniki analizy w formie tabeli po prawej stronie
+1. Uruchom aplikację:
+```bash
+python app.py
+```
 
-## Logowanie
+2. Otwórz przeglądarkę i przejdź pod wskazany adres
+3. Wklej tekst ogłoszenia o pracę do pola tekstowego
+4. Kliknij "Submit" aby otrzymać analizę
 
-Aplikacja zapisuje logi do pliku app.log, co pomaga w monitorowaniu działania i debugowaniu.
+## Struktura projektu
 
-## Licencja
+- `app.py` - główny plik aplikacji
+- `matryca.csv` - plik zawierający matrycę pytań i kryteriów oceny
+- `requirements.txt` - lista wymaganych bibliotek
 
-MIT License
+## Model danych
 
-## Autorzy
+Analiza wykorzystuje dwa główne modele Pydantic:
+- `QuestionAnswer` - reprezentuje pojedyncze pytanie i odpowiedź
+- `JobAdAnalysis` - zawiera pełną analizę ogłoszenia
 
-- Agata Gawska
-- Jacek Zadrożny
+## Wynik analizy
 
-## Kontakt
+Wynik zwracany jest w formacie JSON zawierającym:
+- Obszar analizy
+- Odpowiedź (TAK/NIE)
+- Cytat z tekstu
+- Rekomendacje
+- Dodatkowe informacje
 
-[Link do profilu GitHub](https://github.com/JacZad)
+[Polityka prywatności](polityka.md)
