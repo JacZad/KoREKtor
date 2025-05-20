@@ -119,11 +119,16 @@ def analyze_job_ad(job_ad, file):
     output_df = pd.DataFrame(columns=['area', 'answer', 'citation', 'content', 'more'])
     for i in range(16):
         if response.answers[i].answer in {"TAK", "NIE"}:
+            # Dla indeksu 9 zamieniamy odpowiedź na przeciwną
+            answer = response.answers[i].answer
+            if i == 9:
+                answer = "NIE" if answer == "TAK" else "TAK"
+                
             new_row = {
                 'area': matryca_df.area[i],
-                'answer': response.answers[i].answer,
+                'answer': answer,
                 'citation': response.answers[i].citation,
-                'content': matryca_df.true[i] if response.answers[i].answer == 'TAK' else matryca_df.false[i],
+                'content': matryca_df.true[i] if answer == 'TAK' else matryca_df.false[i],
                 'more': matryca_df.more[i]
             }
             output_df = pd.concat([output_df, pd.DataFrame([new_row])], ignore_index=True)
