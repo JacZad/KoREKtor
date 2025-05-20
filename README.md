@@ -1,14 +1,3 @@
----
-title: KoREKtor
-emoji: 👀
-colorFrom: yellow
-colorTo: green
-sdk: gradio
-sdk_version: 5.24.0
-app_file: app.py
-pinned: false
----
-
 # KoREKtor - Analizator Ogłoszeń o Pracę
 
 ![Logo KoREKtora](logo-korektor.png)
