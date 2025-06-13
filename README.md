@@ -101,3 +101,10 @@ Zachęcamy do zgłaszania uwag i propozycji ulepszeń poprzez system Issues na G
 Ten projekt jest udostępniany na licencji [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 [Polityka prywatności](polityka.md)
+
+## Mapa drogowa
+
+- [ ] Skrócony raport z analizy.
+- [ ] Filtrowanie tekstu przesyłanego do aplikacji.
+- [ ] Generowanie poprawionego ogłoszenia.
+- [ ] Wczytywanie z adresu URL.
