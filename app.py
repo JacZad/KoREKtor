@@ -11,19 +11,31 @@ from datetime import datetime
 import os
 import tempfile
 
-# Model danych
+# --- MODELE DANYCH (PYDANTIC) ---
+# Definiują strukturę danych używaną do parsowania odpowiedzi z LLM
+# oraz do generowania finalnego wyniku JSON.
+
 class QuestionAnswer(BaseModel):
-    question_number: int = Field(..., description="Numer pytania")
-    answer: str = Field(..., description="Odpowiedź, tylko TAK lub NIE")
-    citation: str = Field(..., description="Fragment cytatu")
+    """
+    Reprezentuje pojedynczą odpowiedź na pytanie analityczne.
+    Ten model jest używany przez parser LangChain do strukturyzacji odpowiedzi LLM.
+    """
+    question_number: int = Field(..., description="Numer pytania z wewnętrznej matrycy.")
+    answer: str = Field(..., description="Odpowiedź 'TAK' lub 'NIE'.")
+    citation: str = Field(..., description="Cytat z analizowanego tekstu, na podstawie którego udzielono odpowiedzi.")
 
     @field_validator("answer")
     def validate_answer(cls, v):
+        """Walidator sprawdzający, czy odpowiedź to 'TAK' lub 'NIE'."""
         if v not in {"TAK", "NIE"}:
             raise ValueError("Odpowiedź musi być TAK lub NIE")
         return v
 
 class JobAdAnalysis(BaseModel):
+    """
+    Reprezentuje pełną analizę ogłoszenia, zawierającą listę odpowiedzi.
+    Ten model jest używany przez parser LangChain do strukturyzacji odpowiedzi LLM.
+    """
     answers: list[QuestionAnswer]
 
 parser = PydanticOutputParser(pydantic_object=JobAdAnalysis)
@@ -70,6 +82,19 @@ def doc_to_text(file):
     pages = loader.load()
     return "\n".join(page.page_content for page in pages)
 
+def is_job_ad(text_fragment: str, model: ChatOpenAI) -> bool:
+    """Sprawdza, czy fragment tekstu pochodzi z ogłoszenia o pracę."""
+    try:
+        prompt = PromptTemplate.from_template(
+            "Czy poniższy tekst to fragment ogłoszenia o pracę? Odpowiedz tylko TAK lub NIE.\n\nTekst: {text_to_check}"
+        )
+        chain = prompt | model | StrOutputParser()
+        response = chain.invoke({"text_to_check": text_fragment})
+        return "TAK" in response.upper()
+    except Exception:
+        # W przypadku błędu API, zakładamy, że to nie jest ogłoszenie, aby przerwać przetwarzanie.
+        return False
+
 def _generate_report(result: pd.DataFrame, title: str, prefix: str, include_more: bool) -> str:
     """Tworzy dokument Word na podstawie wyników analizy."""
     doc = Document('template.docx')
@@ -113,55 +138,59 @@ def create_report(result: pd.DataFrame) -> str:
 
 def analyze_job_ad(job_ad, file):
     try:
-        print(f"DEBUG: file={file}, job_ad length={len(job_ad) if job_ad else 0}")
-        
         if file:
             job_ad = doc_to_text(file)
-            print(f"DEBUG: doc_to_text result={job_ad[:100] if job_ad != 'error' else 'ERROR'}")
             if job_ad == "error":
-                return None, None, None
+                return {"error": "Nieobsługiwany format pliku. Użyj PDF lub DOCX."}, None, None
         
         if not job_ad or job_ad.strip() == "":
-            print("DEBUG: Empty job_ad")
             return None, None, None
-            
+        
+        model = ChatOpenAI(temperature=0, model="gpt-4o-mini")
+
+        # Krok 2: Weryfikacja, czy tekst jest ogłoszeniem o pracę
+        text_for_verification = job_ad[:1500]
+        if not is_job_ad(text_for_verification, model):
+            return {"error": "Przesłany tekst lub plik nie wygląda na ogłoszenie o pracę."}, None, None
+
+        # Krok 3: Główna analiza z użyciem LLM
         questions = prepare_questions(matryca_df)
         prompt_template = PromptTemplate.from_template(PROMPT_TEMPLATE_TEXT)
     
-        model = ChatOpenAI(temperature=0, model="gpt-4o-mini")
         chain = prompt_template | model | parser
         response = chain.invoke({"job_ad": job_ad, "questions": questions})
     
-        output_df = pd.DataFrame(columns=['area', 'answer', 'citation', 'content', 'more'])
-        for i in range(16):
-            if response.answers[i].answer in {"TAK", "NIE"}:
-                # Dla indeksu 9 zamieniamy odpowiedź na przeciwną
-                answer = response.answers[i].answer
+        # Krok 4: Przetwarzanie odpowiedzi i budowanie DataFrame
+        rows = []
+        for i, answer_obj in enumerate(response.answers):
+            if answer_obj.answer in {"TAK", "NIE"}:
+                answer = answer_obj.answer
+                # Inwersja odpowiedzi dla pytania nr 10, zgodnie z logiką matrycy.
                 if i == 9:
                     answer = "NIE" if answer == "TAK" else "TAK"
                     
                 new_row = {
                     'area': matryca_df.area[i],
                     'answer': answer,
-                    'citation': response.answers[i].citation,
+                    'citation': answer_obj.citation,
                     'content': matryca_df.true[i] if answer == 'TAK' else matryca_df.false[i],
                     'more': matryca_df.more[i]
                 }
-                output_df = pd.concat([output_df, pd.DataFrame([new_row])], ignore_index=True)
+                rows.append(new_row)
+        
+        output_df = pd.DataFrame(rows)
     
+        # Krok 5: Generowanie raportów i wyniku JSON
         short_word_file_path = create_short_report(output_df)
         word_file_path = create_report(output_df)
+        # Wynik JSON jest tworzony na podstawie przetworzonych danych i udostępniany w interfejsie.
+        # Struktura: lista obiektów, gdzie każdy obiekt to jeden wiersz analizy.
         json_output = output_df.to_dict(orient="records")
-        
-        print(f"DEBUG: Zwracam pliki - pełny: {word_file_path}, skrócony: {short_word_file_path}")
-        print(f"DEBUG: Pliki istnieją - pełny: {os.path.exists(word_file_path)}, skrócony: {os.path.exists(short_word_file_path)}")
-        print(f"DEBUG: Rozmiary plików - pełny: {os.path.getsize(word_file_path) if os.path.exists(word_file_path) else 'N/A'}")
-        print(f"DEBUG: Rozmiary plików - skrócony: {os.path.getsize(short_word_file_path) if os.path.exists(short_word_file_path) else 'N/A'}")
         
         return json_output, word_file_path, short_word_file_path
     except Exception as e:
-        print(f"ERROR w analyze_job_ad: {e}")
-        return None, None, None
+        # Zwracamy błąd w formacie JSON, aby wyświetlić go w interfejsie
+        return {"error": f"Wystąpił wewnętrzny błąd serwera: {e}"}, None, None
 
 # Interfejs Gradio
 demo = gr.Interface(
@@ -171,7 +200,7 @@ demo = gr.Interface(
         gr.File(label="Lub wybierz plik PDF/DOCX", file_types=[".pdf", ".docx"])
     ],
     outputs=[
-        gr.JSON(label="Wyniki analizy"), 
+        gr.JSON(label="Wyniki analizy (JSON)"), 
         gr.File(label="Pobierz pełny raport Word"), 
         gr.File(label="Pobierz skrócony raport Word")
     ],

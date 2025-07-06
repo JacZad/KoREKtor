@@ -1,76 +1,53 @@
 # KoREKtor - Analizator Ogłoszeń o Pracę
 
-![Logo KoREKtora](logo-korektor.png)
+Aplikacja webowa oparta o Gradio i LangChain, która analizuje ogłoszenia o pracę pod kątem ich dostępności i inkluzywności dla osób z niepełnosprawnościami.
 
-KoREKtor to narzędzie wykorzystujące sztuczną inteligencję do analizy ogłoszeń o pracę pod kątem dostępności dla osób z niepełnosprawnościami.
+## Jak używać?
 
-## Do autorstwa przyznają się:
+1.  Uruchom aplikację.
+2.  Wklej tekst ogłoszenia w pole tekstowe lub prześlij plik w formacie `.docx` lub `.pdf`.
+3.  Kliknij przycisk "Submit".
+4.  Po chwili otrzymasz wyniki:
+    *   **Wyniki analizy (JSON):** Surowe dane z analizy w formacie JSON, przeznaczone do dalszego, maszynowego przetwarzania.
+    *   **Pełny raport Word:** Dokument `.docx` ze szczegółowymi wynikami.
+    *   **Skrócony raport Word:** Uproszczona wersja raportu.
 
-- [Agata Gawska](https://www.linkedin.com/in/agata-gawska-b74506205/) - ogólna koncepcja, opracowanie matrycy, schematu działania i przeprowadzenie testów.
-- [Jacek Zadrożny](https://linkedin.com/in/jaczad) - programowanie, dobór technologii, wdrażanie, dokumentacja.
+## Kluczowe funkcje i architektura
 
-![Belka z logotypami](belka.png)
+Aplikacja działa w kilku krokach, aby zapewnić dokładność i zoptymalizować koszty.
 
-## Funkcjonalności
+### 1. Wstępna weryfikacja treści (Funkcja `is_job_ad`)
 
-- Analiza tekstu ogłoszenia o pracę pod kątem dostępności
-- Automatyczna ocena 16 różnych obszarów dostępności
-- Generowanie szczegółowych rekomendacji dla rekruterów
-- Wskazywanie cytatów z ogłoszenia uzasadniających ocenę
-- Obsługa różnych formatów plików (TXT, DOCX, PDF)
-- Interfejs użytkownika oparty na Gradio
+Aby uniknąć niepotrzebnego przetwarzania i kosztów związanych z API, aplikacja najpierw sprawdza, czy przesłany tekst jest faktycznie ogłoszeniem o pracę.
 
-## Jak to działa?
+*   **Ograniczenie kontekstu:** Analizie poddawany jest tylko **pierwsze 1500 znaków** dokumentu. Jest to wystarczające, aby zidentyfikować rodzaj treści, jednocześnie minimalizując zużycie tokenów.
+*   **Zapytanie do AI:** Do modelu `gpt-4o-mini` wysyłane jest proste zapytanie z prośbą o klasyfikację tekstu (czy jest to ogłoszenie o pracę?).
+*   **Obsługa błędu:** Jeśli tekst nie zostanie rozpoznany jako ogłoszenie, proces jest przerywany, a użytkownik otrzymuje stosowny komunikat.
 
-KoREKtor wykorzystuje modele językowe OpenAI do analizy treści ogłoszeń o pracę. Aplikacja sprawdza, czy ogłoszenie spełnia kryteria dostępności dla osób z niepełnosprawnościami zgodnie z opracowaną matrycą oceny. Dla każdego kryterium system generuje:
+### 2. Główna analiza (Funkcja `analyze_job_ad`)
 
-1. Ocenę (TAK/NIE)
-2. Cytat z ogłoszenia uzasadniający ocenę
-3. Konkretne rekomendacje poprawy
-4. Dodatkowe informacje i wskazówki
+Jeśli weryfikacja przebiegnie pomyślnie, rozpoczyna się właściwa analiza całego tekstu ogłoszenia.
 
-## Wymagania
+*   **Przygotowanie pytań:** Pytania do analizy są dynamicznie tworzone na podstawie pliku `matryca.csv`.
+*   **Wywołanie LLM:** Pełny tekst ogłoszenia wraz z pytaniami jest wysyłany do modelu `gpt-4o-mini` za pośrednictwem LangChain.
+*   **Przetwarzanie odpowiedzi:** Odpowiedź modelu w formacie JSON jest parsowana i przekształcana w strukturę danych (DataFrame) w celu łatwiejszego generowania raportów.
 
-- Python 3.8+
-- Zainstalowane zależności z pliku requirements.txt
-- Klucz API OpenAI
+### 3. Generowanie raportów (Funkcje `_generate_report`, `create_report`, `create_short_report`)
 
-## Instalacja
+Na podstawie przetworzonych wyników generowane są dwa oddzielne dokumenty Word.
 
-1. Sklonuj repozytorium:
-```bash
-git clone https://github.com/jaczad/korektor.git
-cd korektor
-```
-
-2. Zainstaluj wymagane zależności:
-```bash
-pip install -r requirements.txt
-```
-
-3. Ustaw zmienną środowiskową z kluczem API OpenAI:
-```bash
-export OPENAI_API_KEY='twój-klucz-api'
-```
-
-## Użycie
-
-1. Uruchom aplikację:
-```bash
-python app.py
-```
-
-2. Otwórz przeglądarkę i przejdź pod wskazany adres (domyślnie http://127.0.0.1:7860)
-3. Wklej tekst ogłoszenia o pracę do pola tekstowego lub prześlij plik
-4. Kliknij "Submit" aby otrzymać analizę
+*   **Refaktoryzacja:** Logika tworzenia dokumentu `.docx` została wydzielona do jednej, prywatnej funkcji `_generate_report`, która jest wywoływana z różnymi parametrami w celu stworzenia raportu pełnego i skróconego.
+*   **Pełny raport:** Zawiera wszystkie informacje z analizy, w tym dodatkowe wskazówki i kontekst z kolumny `more` w pliku `matryca.csv`.
+*   **Skrócony raport:** Prezentuje tylko kluczowe wyniki (obszar, cytat, treść) bez dodatkowych informacji.
 
 ## Struktura projektu
 
-- `app.py` - główny plik aplikacji z interfejsem Gradio
-- `matryca.csv` - plik zawierający matrycę pytań i kryteriów oceny
-- `requirements.txt` - lista wymaganych bibliotek
-- `logo-korektor.png` - logo projektu
-- `belka.png` - grafika z logotypami
+*   `app.py`: Główny plik aplikacji zawierający logikę, definicję interfejsu Gradio i interakcję z API OpenAI.
+*   `matryca.csv`: Plik konfiguracyjny zawierający kryteria analizy, pytania, treści do raportów i wskazówki.
+*   `template.docx`: Szablon dokumentu Word używany do generowania raportów.
+*   `requirements.txt`: Lista wymaganych bibliotek Python.
+*   `logo-korektor.png`: Logo projektu.
+*   `belka.png`: Grafika z logotypami.
 
 ## Model danych
 
@@ -78,18 +55,21 @@ Analiza wykorzystuje dwa główne modele Pydantic:
 - `QuestionAnswer` - reprezentuje pojedyncze pytanie i odpowiedź
 - `JobAdAnalysis` - zawiera pełną analizę ogłoszenia
 
-## Wynik analizy
+## Wynik analizy (JSON)
 
-Wynik zwracany jest w formacie JSON zawierającym:
-- Obszar analizy
-- Odpowiedź (TAK/NIE)
-- Cytat z tekstu
-- Rekomendacje
-- Dodatkowe informacje
+Aplikacja zwraca wynik w formacie JSON, który jest listą obiektów. Każdy obiekt reprezentuje wynik analizy jednego kryterium z `matryca.csv` i zawiera następujące pola:
+
+-   `area` (string): Nazwa obszaru analizy (np. "Język inkluzywny", "Elastyczność pracy").
+-   `answer` (string): Odpowiedź "TAK" lub "NIE", wskazująca, czy kryterium zostało spełnione.
+-   `citation` (string): Dokładny fragment tekstu z ogłoszenia, który był podstawą do odpowiedzi.
+-   `content` (string): Rekomendacja lub komentarz wygenerowany na podstawie odpowiedzi.
+-   `more` (string): Dodatkowe wskazówki i informacje kontekstowe (używane w pełnym raporcie).
+
+Ten format jest przeznaczony do łatwej integracji z innymi systemami i narzędziami analitycznymi.
 
 ## Wersja online
 
-<!-- Aplikacja jest również dostępna online na platformie [Deklaracja-dostepnosci.info](https://deklaracja-dostepnosci.info/korektor)
+Aplikacja jest również dostępna online na platformie [Deklaracja-dostepnosci.info](https://deklaracja-dostepnosci.info/korektor)
 
 
 ## Współpraca i rozwój
@@ -98,6 +78,16 @@ Zachęcamy do zgłaszania uwag i propozycji ulepszeń poprzez system Issues na G
 
 ## Licencja
 
+Ten projekt jest udostępniany na licencji [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+[Polityka prywatności](polityka.md)
+
+## Mapa drogowa
+
+- [x] Skrócony raport z analizy.
+- [x] Filtrowanie tekstu przesyłanego do aplikacji.
+- [ ] Generowanie poprawionego ogłoszenia.
+- [ ] Wczytywanie z adresu URL.
 Ten projekt jest udostępniany na licencji [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 [Polityka prywatności](polityka.md)
