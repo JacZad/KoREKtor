@@ -28,26 +28,35 @@ class JobAdAnalysis(BaseModel):
 
 parser = PydanticOutputParser(pydantic_object=JobAdAnalysis)
 
+PROMPT_TEMPLATE_TEXT = """Przeanalizuj poniższe ogłoszenie o pracę pod kątem dostępności dla osób z niepełnosprawnościami.
+
+Ogłoszenie:
+{job_ad}
+
+Odpowiedz na następujące pytania:
+{questions}
+
+Format odpowiedzi powinien być w następującej strukturze JSON:
+{{
+  "answers": [
+    {{
+      "question_number": 1,
+      "answer": "TAK/NIE",
+      "citation": "dokładny cytat z tekstu"
+    }}
+  ]
+}}
+"""
+
 # Wczytanie matrycy danych
 matryca_df = pd.read_csv('matryca.csv', header=None,
                          names=['area', 'prompt', 'true', 'false', 'more', 'hint'])
 
-question_to_area_map = {}
-
 def prepare_questions(df):
-    global question_to_area_map
-    question_to_area_map = {}
     questions_text = ""
     for index, row in df.iterrows():
         question_number = index + 1
         questions_text += f"{question_number} {row['prompt']}\n"
-        question_to_area_map[question_number] = {
-            'area': row['area'],
-            'true': row['true'],
-            'false': row['false'],
-            'hint': row['hint'],
-            'more': row['more']
-        }
     return questions_text
 
 def doc_to_text(file):
@@ -61,9 +70,10 @@ def doc_to_text(file):
     pages = loader.load()
     return "\n".join(page.page_content for page in pages)
 
-def create_short_report(result: pd.DataFrame) -> str:
+def _generate_report(result: pd.DataFrame, title: str, prefix: str, include_more: bool) -> str:
+    """Tworzy dokument Word na podstawie wyników analizy."""
     doc = Document('template.docx')
-    doc.add_heading('Raport analizy ogłoszenia o pracę (wersja skrócona)', 0)
+    doc.add_heading(title, 0)
     doc.add_paragraph(f'Data wygenerowania: {datetime.now().strftime("%d.%m.%Y %H:%M")}')
     
     for _, row in result.iterrows():
@@ -72,36 +82,34 @@ def create_short_report(result: pd.DataFrame) -> str:
         for line in str(row['content']).split('\n'):
             if line.strip():
                 doc.add_paragraph(line)
-    
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    prefix = f"KoREKtor_short_{timestamp}_"
-    
-    with tempfile.NamedTemporaryFile(delete=False, prefix=prefix, suffix=".docx") as tmp:
-        doc.save(tmp.name)
-        return tmp.name
-
-def create_report(result: pd.DataFrame) -> str:
-    doc = Document('template.docx')
-    doc.add_heading('Raport analizy ogłoszenia o pracę', 0)
-    doc.add_paragraph(f'Data wygenerowania: {datetime.now().strftime("%d.%m.%Y %H:%M")}')
-    for _, row in result.iterrows():
-        doc.add_heading(str(row['area']), 1)
-        doc.add_paragraph(str(row['citation']), style='Intense Quote')
-        for line in str(row['content']).split('\n'):
-            if line.strip():
-                doc.add_paragraph(line)
-        if pd.notna(row['more']):
+        
+        if include_more and pd.notna(row['more']):
             for line in str(row['more']).split('\n'):
                 if line.strip():
                     doc.add_paragraph(line)
-    
-    # Użycie prefix dla nazwy pliku zaczynającej się od "KoREKtor_"
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    prefix = f"KoREKtor_pelny_{timestamp}_"
+    filename_prefix = f"{prefix}{timestamp}_"
     
-    with tempfile.NamedTemporaryFile(delete=False, prefix=prefix, suffix=".docx") as tmp_full:
-        doc.save(tmp_full.name)
-        return tmp_full.name  # Zwracamy ścieżkę do pliku tymczasowego
+    with tempfile.NamedTemporaryFile(delete=False, prefix=filename_prefix, suffix=".docx") as tmp:
+        doc.save(tmp.name)
+        return tmp.name
+
+def create_short_report(result: pd.DataFrame) -> str:
+    return _generate_report(
+        result,
+        title='Raport analizy ogłoszenia o pracę (wersja skrócona)',
+        prefix='KoREKtor_short_',
+        include_more=False
+    )
+
+def create_report(result: pd.DataFrame) -> str:
+    return _generate_report(
+        result,
+        title='Raport analizy ogłoszenia o pracę',
+        prefix='KoREKtor_pelny_',
+        include_more=True
+    )
 
 def analyze_job_ad(job_ad, file):
     try:
@@ -118,27 +126,7 @@ def analyze_job_ad(job_ad, file):
             return None, None, None
             
         questions = prepare_questions(matryca_df)
-        prompt_template = PromptTemplate.from_template(
-            """Przeanalizuj poniższe ogłoszenie o pracę pod kątem dostępności dla osób z niepełnosprawnościami.
-    
-            Ogłoszenie:
-            {job_ad}
-    
-            Odpowiedz na następujące pytania:
-            {questions}
-    
-            Format odpowiedzi powinien być w następującej strukturze JSON:
-            {{
-              "answers": [
-                {{
-                  "question_number": 1,
-                  "answer": "TAK/NIE",
-                  "citation": "dokładny cytat z tekstu"
-                }}
-              ]
-            }}
-            """
-        )
+        prompt_template = PromptTemplate.from_template(PROMPT_TEMPLATE_TEXT)
     
         model = ChatOpenAI(temperature=0, model="gpt-4o-mini")
         chain = prompt_template | model | parser
