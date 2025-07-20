@@ -11,6 +11,46 @@ from datetime import datetime
 import os
 import tempfile
 
+# Import modułu hr_assistant
+try:
+    from hr_assistant import HRAssistant
+    HR_ASSISTANT_AVAILABLE = True
+except ImportError:
+    HR_ASSISTANT_AVAILABLE = False
+    print("Uwaga: Moduł hr_assistant nie jest dostępny.")
+
+# Globalna instancja asystenta HR
+hr_assistant = None
+
+def initialize_hr_assistant():
+    """Inicjalizuje asystenta HR"""
+    global hr_assistant, HR_ASSISTANT_AVAILABLE
+    
+    if not HR_ASSISTANT_AVAILABLE:
+        return False
+    
+    try:
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if not openai_api_key:
+            print("Uwaga: Brak klucza OPENAI_API_KEY. Ekspert HR będzie wyłączony.")
+            HR_ASSISTANT_AVAILABLE = False
+            return False
+        
+        hr_assistant = HRAssistant(
+            openai_api_key=openai_api_key,
+            pdf_directory="pdfs"  # Dostosuj ścieżkę do swoich potrzeb
+        )
+        print("✅ Asystent HR został zainicjalizowany pomyślnie.")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Błąd podczas inicjalizacji asystenta HR: {e}")
+        HR_ASSISTANT_AVAILABLE = False
+        return False
+
+# Inicjalizuj asystenta przy starcie
+initialize_hr_assistant()
+
 # --- MODELE DANYCH (PYDANTIC) ---
 # Definiują strukturę danych używaną do parsowania odpowiedzi z LLM
 # oraz do generowania finalnego wyniku JSON.
@@ -192,18 +232,49 @@ def analyze_job_ad(job_ad, file):
         # Zwracamy błąd w formacie JSON, aby wyświetlić go w interfejsie
         return {"error": f"Wystąpił wewnętrzny błąd serwera: {e}"}, None, None
 
-# Interfejs Gradio
-demo = gr.Interface(
+# Interfejs Gradio dla głównej analizy
+analysis_demo = gr.Interface(
     fn=analyze_job_ad,
     inputs=[
         gr.TextArea(label="Ogłoszenie (opcjonalnie)", placeholder="Wklej tekst ogłoszenia tutaj..."), 
-        gr.File(label="Lub wybierz plik PDF/DOCX", file_types=[".pdf", ".docx"])
+        gr.File(label="Lub wybierz plik PDF/DOCX", file_types=[".pdf", ".docx"]),
     ],
     outputs=[
         gr.JSON(label="Wyniki analizy (JSON)"), 
         gr.File(label="Pobierz pełny raport Word"), 
-        gr.File(label="Pobierz skrócony raport Word")
+        gr.File(label="Pobierz skrócony raport Word"),
     ],
     title="KoREKtor – analiza ogłoszenia",
     description="Przeanalizuj ogłoszenie o pracę pod kątem dostępności dla osób z niepełnosprawnościami"
-).launch()
+)
+
+def ask_hr_assistant(question):
+    """Funkcja do zadawania pytań asystentowi HR."""
+    global hr_assistant, HR_ASSISTANT_AVAILABLE
+    if not HR_ASSISTANT_AVAILABLE or hr_assistant is None:
+        return "⚠️ Ekspert HR nie jest dostępny. Sprawdź konfigurację modułu hr_assistant i klucz OPENAI_API_KEY."
+    try:
+        response = hr_assistant.ask(question)
+        answer = f"🤖 **Ekspert HR:**\n\n{response['answer']}"
+        if response.get('sources'):
+            answer += f"\n\n📚 **Źródła:**\n"
+            for i, source in enumerate(response['sources'][:3], 1):  # Max 3 źródła
+                # Usunięcie nazwy pliku ze źródła
+                answer += f"{i}. str. {source.get('page', '?')}\n"
+        return answer
+    except Exception as e:
+        return f"❌ Wystąpił błąd podczas komunikacji z ekspertem HR: {e}"
+
+# Interfejs Gradio dla asystenta HR
+hr_assistant_demo = gr.Interface(
+    fn=ask_hr_assistant,
+    inputs=gr.TextArea(label="Pytanie do eksperta HR", placeholder="Zadaj pytanie..."),
+    outputs=gr.Markdown(label="Odpowiedź eksperta HR"),
+    title="KoREKtor – Ekspert HR",
+    description="Zadaj pytanie ekspertowi HR w zakresie zatrudniania osób z niepełnosprawnościami."
+)
+
+# Łączenie interfejsów w zakładki
+demo = gr.TabbedInterface([analysis_demo, hr_assistant_demo], ["Analiza Ogłoszenia", "Ekspert HR"])
+
+demo.launch()
