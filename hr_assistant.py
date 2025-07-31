@@ -486,7 +486,7 @@ if __name__ == "__main__":
 # 1. Ustaw zmienną środowiskową z kluczem OpenAI:
 #    export OPENAI_API_KEY="twoj_klucz_openai"
 #
-# 2. Umieść pliki PDF w katalogu "pdfs" (lub wskaż inny katalog w parametrze pdf_directory).
+# 2. Umieść pliki PDF w katalogu "pdfs" (lub wskaź inny katalog w parametrze pdf_directory).
 #
 # 3. Zainstaluj wymagane biblioteki:
 #    pip install -r requirements.txt
@@ -499,4 +499,5 @@ if __name__ == "__main__":
 #    assistant = HRAssistant(openai_api_key="...", pdf_directory="pdfs")
 #    odpowiedz = assistant.ask("Twoje pytanie")
 #
+# 6. Szczegóły i przykłady znajdziesz w README.md oraz EXAMPLES.md.
 # 6. Szczegóły i przykłady znajdziesz w README.md oraz EXAMPLES.md.

@@ -11,42 +11,29 @@ from datetime import datetime
 import os
 import tempfile
 
-# Import modułu hr_assistant
-try:
-    from hr_assistant import HRAssistant
-    HR_ASSISTANT_AVAILABLE = True
-except ImportError:
-    HR_ASSISTANT_AVAILABLE = False
-    print("Uwaga: Moduł hr_assistant nie jest dostępny.")
+# Import modułu hr_assistant (bezwarunkowo)
+from hr_assistant import HRAssistant
 
 # Globalna instancja asystenta HR
 hr_assistant = None
 
 def initialize_hr_assistant():
     """Inicjalizuje asystenta HR"""
-    global hr_assistant, HR_ASSISTANT_AVAILABLE
+    global hr_assistant
     
-    if not HR_ASSISTANT_AVAILABLE:
-        return False
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        raise ValueError("Brak klucza OPENAI_API_KEY. Ekspert HR nie może zostać uruchomiony.")
     
     try:
-        openai_api_key = os.getenv("OPENAI_API_KEY")
-        if not openai_api_key:
-            print("Uwaga: Brak klucza OPENAI_API_KEY. Ekspert HR będzie wyłączony.")
-            HR_ASSISTANT_AVAILABLE = False
-            return False
-        
         hr_assistant = HRAssistant(
             openai_api_key=openai_api_key,
-            pdf_directory="pdfs"  # Dostosuj ścieżkę do swoich potrzeb
+            pdf_directory="pdfs"
         )
         print("✅ Asystent HR został zainicjalizowany pomyślnie.")
-        return True
-        
     except Exception as e:
         print(f"❌ Błąd podczas inicjalizacji asystenta HR: {e}")
-        HR_ASSISTANT_AVAILABLE = False
-        return False
+        raise
 
 # Inicjalizuj asystenta przy starcie
 initialize_hr_assistant()
@@ -103,6 +90,14 @@ Format odpowiedzi powinien być w następującej strukturze JSON:
 # Wczytanie matrycy danych
 matryca_df = pd.read_csv('matryca.csv', header=None,
                          names=['area', 'prompt', 'true', 'false', 'more', 'hint'])
+
+# Wczytanie bibliografii i stworzenie mapowania
+try:
+    biblio_df = pd.read_csv('bibliografia.csv', sep=';')
+    biblio_map = pd.Series(biblio_df.opis.values, index=biblio_df.filename).to_dict()
+except FileNotFoundError:
+    print("⚠️ Ostrzeżenie: Plik bibliografia.csv nie został znaleziony. Źródła będą wyświetlane jako nazwy plików.")
+    biblio_map = {}
 
 def prepare_questions(df):
     questions_text = ""
@@ -177,6 +172,8 @@ def create_report(result: pd.DataFrame) -> str:
     )
 
 def analyze_job_ad(job_ad, file):
+    if not job_ad and not file:
+        return None, None, None
     try:
         if file:
             job_ad = doc_to_text(file)
@@ -232,49 +229,79 @@ def analyze_job_ad(job_ad, file):
         # Zwracamy błąd w formacie JSON, aby wyświetlić go w interfejsie
         return {"error": f"Wystąpił wewnętrzny błąd serwera: {e}"}, None, None
 
-# Interfejs Gradio dla głównej analizy
-analysis_demo = gr.Interface(
-    fn=analyze_job_ad,
-    inputs=[
-        gr.TextArea(label="Ogłoszenie (opcjonalnie)", placeholder="Wklej tekst ogłoszenia tutaj..."), 
-        gr.File(label="Lub wybierz plik PDF/DOCX", file_types=[".pdf", ".docx"]),
-    ],
-    outputs=[
-        gr.JSON(label="Wyniki analizy (JSON)"), 
-        gr.File(label="Pobierz pełny raport Word"), 
-        gr.File(label="Pobierz skrócony raport Word"),
-    ],
-    title="KoREKtor – analiza ogłoszenia",
-    description="Przeanalizuj ogłoszenie o pracę pod kątem dostępności dla osób z niepełnosprawnościami"
-)
-
 def ask_hr_assistant(question):
-    """Funkcja do zadawania pytań asystentowi HR."""
-    global hr_assistant, HR_ASSISTANT_AVAILABLE
-    if not HR_ASSISTANT_AVAILABLE or hr_assistant is None:
-        return "⚠️ Ekspert HR nie jest dostępny. Sprawdź konfigurację modułu hr_assistant i klucz OPENAI_API_KEY."
+    """Funkcja do zadawania pytań asystentowi HR.
+
+    Args:
+        question (str): Pytanie do eksperta HR.
+
+    Returns:
+        str: Odpowiedź eksperta HR w formacie Markdown.
+    """
+    global hr_assistant
+    if hr_assistant is None:
+        return "⚠️ Ekspert HR nie jest dostępny z powodu błędu inicjalizacji. Sprawdź logi serwera."
     try:
         response = hr_assistant.ask(question)
         answer = f"🤖 **Ekspert HR:**\n\n{response['answer']}"
-        if response.get('sources'):
-            answer += f"\n\n📚 **Źródła:**\n"
-            for i, source in enumerate(response['sources'][:3], 1):  # Max 3 źródła
-                # Usunięcie nazwy pliku ze źródła
-                answer += f"{i}. str. {source.get('page', '?')}\n"
+        
+        sources = response.get('sources')
+        if sources:
+            answer += "\n\n📚 **Źródła:**\n"
+            
+            unique_sources = []
+            seen_filenames = set()
+            for source in sources:
+                filename = source.get('filename')
+                if filename and filename not in seen_filenames:
+                    seen_filenames.add(filename)
+                    unique_sources.append(source)
+            
+            for i, source in enumerate(unique_sources[:3], 1):
+                filename = source.get('filename', 'Nieznane źródło')
+                page = source.get('page', '?')
+                citation = biblio_map.get(filename, filename)  # Użyj mapowania lub nazwy pliku
+                answer += f"{i}. {citation}, s. {page}\n"
+                
         return answer
     except Exception as e:
         return f"❌ Wystąpił błąd podczas komunikacji z ekspertem HR: {e}"
 
-# Interfejs Gradio dla asystenta HR
-hr_assistant_demo = gr.Interface(
-    fn=ask_hr_assistant,
-    inputs=gr.TextArea(label="Pytanie do eksperta HR", placeholder="Zadaj pytanie..."),
-    outputs=gr.Markdown(label="Odpowiedź eksperta HR"),
-    title="KoREKtor – Ekspert HR",
-    description="Zadaj pytanie ekspertowi HR w zakresie zatrudniania osób z niepełnosprawnościami."
-)
+# --- Interfejs Gradio ---
+with gr.Blocks(theme=gr.themes.Soft(primary_hue="blue", secondary_hue="orange"), title="KoREKtor") as demo:
+    gr.Image("logo-korektor.png", width=200, show_label=False)
 
-# Łączenie interfejsów w zakładki
-demo = gr.TabbedInterface([analysis_demo, hr_assistant_demo], ["Analiza Ogłoszenia", "Ekspert HR"])
+    # --- Analizator ogłoszeń ---
+    gr.Markdown("--- ")
+    gr.Markdown("## Analizator ogłoszeń\nPrzeanalizuj ogłoszenie pod kątem dostępności.")
+    with gr.Row():
+        with gr.Column(scale=1):
+            job_ad_input_text = gr.TextArea(label="Wklej treść ogłoszenia", lines=15)
+            job_ad_input_file = gr.File(label="lub wgraj plik (PDF/DOCX)", file_types=[".pdf", ".docx"])
+            analyze_button = gr.Button("Analizuj", variant="primary")
+        with gr.Column(scale=2):
+            json_output = gr.JSON(label="Wyniki analizy")
+            short_report_output = gr.File(label="Pobierz raport skrócony")
+            full_report_output = gr.File(label="Pobierz raport pełny")
+
+    analyze_button.click(
+        fn=analyze_job_ad,
+        inputs=[job_ad_input_text, job_ad_input_file],
+        outputs=[json_output, full_report_output, short_report_output]
+    )
+
+    # --- Asystent HR ---
+    gr.Markdown("--- ")
+    gr.Markdown("## Asystent HR\nZadaj pytanie ekspertowi HR.")
+    
+    question_input = gr.TextArea(label="Pytanie", placeholder="Zadaj pytanie...")
+    ask_button = gr.Button("Wyślij", variant="primary")
+    answer_output = gr.Markdown(label="Odpowiedź")
+
+    ask_button.click(
+        fn=ask_hr_assistant,
+        inputs=question_input,
+        outputs=answer_output
+    )
 
 demo.launch()

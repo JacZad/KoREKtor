@@ -1,100 +1,200 @@
-# KoREKtor - Analizator Ogłoszeń o Pracę
+# KoREKtor: Analizator Dostępności Ogłoszeń i Asystent HR
 
-Aplikacja webowa oparta o Gradio i LangChain, która analizuje ogłoszenia o pracę pod kątem ich dostępności i inkluzywności dla osób z niepełnosprawnościami.
+**KoREKtor** to zaawansowane narzędzie zaprojektowane, aby wspierać pracodawców w tworzeniu bardziej inkluzywnych i dostępnych miejsc pracy dla osób z niepełnosprawnościami. Aplikacja składa się z dwóch głównych modułów dostarczanych w jednym, łatwym w obsłudze interfejsie webowym.
 
-## Jak używać?
+![Logo](logo-korektor.png)
 
-1.  Uruchom aplikację.
-2.  Wklej tekst ogłoszenia w pole tekstowe lub prześlij plik w formacie `.docx` lub `.pdf`.
-3.  Kliknij przycisk "Submit".
-4.  Po chwili otrzymasz wyniki:
-    *   **Wyniki analizy (JSON):** Surowe dane z analizy w formacie JSON, przeznaczone do dalszego, maszynowego przetwarzania.
-    *   **Pełny raport Word:** Dokument `.docx` ze szczegółowymi wynikami.
-    *   **Skrócony raport Word:** Uproszczona wersja raportu.
+---
 
-## Kluczowe funkcje i architektura
+## Główne Funkcje
 
-Aplikacja działa w kilku krokach, aby zapewnić dokładność i zoptymalizować koszty.
+### 1. Analizator Ogłoszeń o Pracę
 
-### 1. Wstępna weryfikacja treści (Funkcja `is_job_ad`)
+Moduł ten pozwala na automatyczną analizę ogłoszeń o pracę pod kątem ich dostępności i potencjalnych barier dla kandydatów z niepełnosprawnościami. Użytkownik może wkleić tekst ogłoszenia lub wgrać plik w formacie PDF/DOCX.
 
-Aby uniknąć niepotrzebnego przetwarzania i kosztów związanych z API, aplikacja najpierw sprawdza, czy przesłany tekst jest faktycznie ogłoszeniem o pracę.
+- **Inteligentna Analiza:** Wykorzystuje duży model językowy (LLM) do oceny treści na podstawie predefiniowanej matrycy kryteriów.
+- **Generowanie Raportów:** Tworzy dwa rodzaje raportów w formacie `.docx`:
+  - **Raport Skrócony:** Zawiera kluczowe rekomendacje i podsumowanie.
+  - **Raport Pełny:** Oferuje szczegółową analizę każdego punktu z matrycy, wraz z cytatami i sugestiami.
+- **Wyniki w Formacie JSON:** Udostępnia wyniki w formacie JSON do dalszej analizy lub integracji.
 
-*   **Ograniczenie kontekstu:** Analizie poddawany jest tylko **pierwsze 1500 znaków** dokumentu. Jest to wystarczające, aby zidentyfikować rodzaj treści, jednocześnie minimalizując zużycie tokenów.
-*   **Zapytanie do AI:** Do modelu `gpt-4o-mini` wysyłane jest proste zapytanie z prośbą o klasyfikację tekstu (czy jest to ogłoszenie o pracę?).
-*   **Obsługa błędu:** Jeśli tekst nie zostanie rozpoznany jako ogłoszenie, proces jest przerywany, a użytkownik otrzymuje stosowny komunikat.
+### 2. Asystent HR
 
-### 2. Główna analiza (Funkcja `analyze_job_ad`)
+To interaktywny chatbot oparty na wiedzy z wbudowanej bazy dokumentów (poradników, raportów, dobrych praktyk). Asystent odpowiada na pytania związane z zatrudnianiem, rekrutacją i zarządzaniem pracownikami z niepełnosprawnościami w Polsce.
 
-Jeśli weryfikacja przebiegnie pomyślnie, rozpoczyna się właściwa analiza całego tekstu ogłoszenia.
+- **Baza Wiedzy:** Opiera się na starannie wyselekcjonowanych plikach PDF.
+- **Precyzyjne Odpowiedzi:** Dzięki mechanizmowi RAG (Retrieval-Augmented Generation) odpowiedzi są kontekstowe i bazują na treści dokumentów.
+- **Cytowanie Źródeł:** Każda odpowiedź zawiera odwołania do konkretnych dokumentów i numerów stron, co zapewnia wiarygodność.
 
-*   **Przygotowanie pytań:** Pytania do analizy są dynamicznie tworzone na podstawie pliku `matryca.csv`.
-*   **Wywołanie LLM:** Pełny tekst ogłoszenia wraz z pytaniami jest wysyłany do modelu `gpt-4o-mini` za pośrednictwem LangChain.
-*   **Przetwarzanie odpowiedzi:** Odpowiedź modelu w formacie JSON jest parsowana i przekształcana w strukturę danych (DataFrame) w celu łatwiejszego generowania raportów.
+---
 
-### 3. Generowanie raportów (Funkcje `_generate_report`, `create_report`, `create_short_report`)
+## Instalacja i Uruchomienie
 
-Na podstawie przetworzonych wyników generowane są dwa oddzielne dokumenty Word.
+1.  **Klonowanie Repozytorium:**
+    ```bash
+    git clone <adres-repozytorium>
+    cd korektor2
+    ```
 
-*   **Refaktoryzacja:** Logika tworzenia dokumentu `.docx` została wydzielona do jednej, prywatnej funkcji `_generate_report`, która jest wywoływana z różnymi parametrami w celu stworzenia raportu pełnego i skróconego.
-*   **Pełny raport:** Zawiera wszystkie informacje z analizy, w tym dodatkowe wskazówki i kontekst z kolumny `more` w pliku `matryca.csv`.
-*   **Skrócony raport:** Prezentuje tylko kluczowe wyniki (obszar, cytat, treść) bez dodatkowych informacji.
+2.  **Utworzenie i Aktywacja Środowiska Wirtualnego:**
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
 
-## Struktura projektu
+3.  **Instalacja Zależności:**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-*   `app.py`: Główny plik aplikacji zawierający logikę, definicję interfejsu Gradio i interakcję z API OpenAI.
-*   `matryca.csv`: Plik konfiguracyjny zawierający kryteria analizy, pytania, treści do raportów i wskazówki.
-*   `template.docx`: Szablon dokumentu Word używany do generowania raportów.
-*   `requirements.txt`: Lista wymaganych bibliotek Python.
-*   `logo-korektor.png`: Logo projektu.
-*   `belka.png`: Grafika z logotypami.
+4.  **Ustawienie Klucza API OpenAI:**
+    ```bash
+    export OPENAI_API_KEY="<Twój-klucz-API>"
+    ```
 
-## Model danych
+5.  **Uruchomienie Aplikacji:**
+    ```bash
+    python3 app.py
+    ```
+    Aplikacja będzie dostępna pod adresem: `http://127.0.0.1:7860`.
 
-Analiza wykorzystuje dwa główne modele Pydantic:
-- `QuestionAnswer` - reprezentuje pojedyncze pytanie i odpowiedź
-- `JobAdAnalysis` - zawiera pełną analizę ogłoszenia
+---
 
-## Wynik analizy (JSON)
+## Użycie
 
-Aplikacja zwraca wynik w formacie JSON, który jest listą obiektów. Każdy obiekt reprezentuje wynik analizy jednego kryterium z `matryca.csv` i zawiera następujące pola:
+### Interfejs Webowy
 
--   `area` (string): Nazwa obszaru analizy (np. "Język inkluzywny", "Elastyczność pracy").
--   `answer` (string): Odpowiedź "TAK" lub "NIE", wskazująca, czy kryterium zostało spełnione.
--   `citation` (string): Dokładny fragment tekstu z ogłoszenia, który był podstawą do odpowiedzi.
--   `content` (string): Rekomendacja lub komentarz wygenerowany na podstawie odpowiedzi.
--   `more` (string): Dodatkowe wskazówki i informacje kontekstowe (używane w pełnym raporcie).
+Po uruchomieniu aplikacji w przeglądarce pojawią się dwa główne narzędzia:
 
-Ten format jest przeznaczony do łatwej integracji z innymi systemami i narzędziami analitycznymi.
+-   **Analizator Ogłoszeń:**
+    1.  Wklej tekst ogłoszenia w pole tekstowe lub przeciągnij plik PDF/DOCX.
+    2.  Kliknij przycisk **"Analizuj"**.
+    3.  Wyniki pojawią się w formacie JSON, a poniżej będą dostępne linki do pobrania raportów.
 
-## Wersja online
+-   **Asystent HR:**
+    1.  Wpisz swoje pytanie w polu tekstowym.
+    2.  Kliknij **"Wyślij"**.
+    3.  Odpowiedź wraz ze źródłami pojawi się poniżej.
 
-Aplikacja jest również dostępna online na platformie [Deklaracja-dostepnosci.info](https://deklaracja-dostepnosci.info/korektor)
+### Dostęp przez API (Gradio)
 
+Aplikacja Gradio automatycznie udostępnia API, które pozwala na zdalne wywoływanie funkcji. Poniżej znajdują się przykłady, jak z niego korzystać.
 
-## Współpraca i rozwój
+#### 1. API Analizatora Ogłoszeń
 
-Zachęcamy do zgłaszania uwag i propozycji ulepszeń poprzez system Issues na GitHubie.
+Funkcja `analyze_job_ad` przyjmuje dwa argumenty: tekst ogłoszenia i opcjonalnie plik. Zwraca trzy wartości: JSON z wynikami, plik z pełnym raportem i plik ze skróconym raportem.
 
-## Licencja
+**Przykład użycia `curl` (wysyłanie tekstu):**
+```bash
+curl -X POST http://127.0.0.1:7860/run/predict \
+-H "Content-Type: application/json" \
+-d '{
+  "data": [
+    "Treść przykładowego ogłoszenia o pracę...",
+    null
+  ]
+}'
+```
 
-Ten projekt jest udostępniany na licencji [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+**Przykład użycia w Pythonie (`requests`):**
+```python
+import requests
+import json
 
-[Polityka prywatności](polityka.md)
+response = requests.post(
+    "http://127.0.0.1:7860/run/predict",
+    json={
+        "data": [
+            "Wymagania: 5 lat doświadczenia w branży.", # Tekst ogłoszenia
+            None  # Brak pliku
+        ]
+    }
+)
 
-## Mapa drogowa
+if response.status_code == 200:
+    result = response.json()
+    # Wyniki są w kluczu 'data'
+    json_output = result['data'][0]
+    full_report_path = result['data'][1]['name']
+    short_report_path = result['data'][2]['name']
+    
+    print("Wyniki JSON:", json.dumps(json_output, indent=2))
+    print("Ścieżka do pełnego raportu:", full_report_path)
+    print("Ścieżka do skróconego raportu:", short_report_path)
+else:
+    print("Błąd:", response.text)
+```
 
-- [x] Skrócony raport z analizy.
-- [x] Filtrowanie tekstu przesyłanego do aplikacji.
-- [ ] Generowanie poprawionego ogłoszenia.
-- [ ] Wczytywanie z adresu URL.
-Ten projekt jest udostępniany na licencji [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+#### 2. API Asystenta HR
 
-[Polityka prywatności](polityka.md)
+Funkcja `ask_hr_assistant` przyjmuje jeden argument: pytanie w formie tekstowej. Zwraca odpowiedź w formacie Markdown.
 
-## Mapa drogowa
+**Przykład użycia `curl`:**
+```bash
+curl -X POST http://127.0.0.1:7860/run/predict \
+-H "Content-Type: application/json" \
+-d '{
+  "data": [
+    "Jakie są obowiązki pracodawcy wobec pracownika z niepełnosprawnością?"
+  ]
+}'
+```
 
-- [ ] Skrócony raport z analizy.
-- [ ] Filtrowanie tekstu przesyłanego do aplikacji.
-- [ ] Generowanie poprawionego ogłoszenia.
-- [ ] Wczytywanie z adresu URL.
+**Przykład użycia w Pythonie (`requests`):**
+```python
+import requests
+
+response = requests.post(
+    "http://127.0.0.1:7860/run/predict",
+    json={
+        "data": [
+            "Jakie są uprawnienia pracownika z orzeczeniem o niepełnosprawności?"
+        ]
+    }
+)
+
+if response.status_code == 200:
+    result = response.json()
+    answer = result['data'][0]
+    print("Odpowiedź Asystenta:", answer)
+else:
+    print("Błąd:", response.text)
+```
+
+---
+
+## Struktura Projektu
+
+```
+/Users/jacek/korektor2/
+├── app.py                # Główny plik aplikacji Gradio
+├── hr_assistant.py       # Logika asystenta HR i obsługi bazy wiedzy
+├── requirements.txt      # Lista zależności Python
+├── matryca.csv           # Matryca kryteriów dla analizatora ogłoszeń
+├── bibliografia.csv      # Dane bibliograficzne dla źródeł
+├── template.docx         # Szablon dla generowanych raportów
+├── pdfs/                 # Katalog z dokumentami bazy wiedzy
+└── README.md             # Ta dokumentacja
+```
+
+---
+
+## Pliki Danych
+
+-   **`matryca.csv`**: Kluczowy plik dla analizatora ogłoszeń. Każdy wiersz definiuje jedno kryterium oceny, zawierając m.in. treść pytania do modelu LLM oraz szablony odpowiedzi.
+-   **`bibliografia.csv`**: Plik mapujący nazwy plików PDF na pełne opisy bibliograficzne, używane w odpowiedziach Asystenta HR.
+
+---
+
+## Zależności
+
+Projekt korzysta z następujących głównych bibliotek (pełna lista w `requirements.txt`):
+
+-   `gradio`: Do budowy interfejsu webowego.
+-   `langchain` i `langchain-openai`: Do interakcji z modelami językowymi.
+-   `pandas`: Do wczytywania i przetwarzania danych z plików CSV.
+-   `python-docx`: Do generowania raportów w formacie DOCX.
+-   `pypdf` i `docx2txt`: Do odczytu treści z plików.
+-   `faiss-cpu`: Do tworzenia wektorowej bazy danych.
+-   `tiktoken`: Do tokenizacji tekstu.
+-   `pymupdf` i `sentence-transformers`: Do inteligentnego dzielenia dokumentów PDF na fragmenty.
