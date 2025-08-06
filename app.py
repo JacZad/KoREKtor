@@ -91,14 +91,6 @@ Format odpowiedzi powinien być w następującej strukturze JSON:
 matryca_df = pd.read_csv('matryca.csv', header=None,
                          names=['area', 'prompt', 'true', 'false', 'more', 'hint'])
 
-# Wczytanie bibliografii i stworzenie mapowania
-try:
-    biblio_df = pd.read_csv('bibliografia.csv', sep=';')
-    biblio_map = pd.Series(biblio_df.opis.values, index=biblio_df.filename).to_dict()
-except FileNotFoundError:
-    print("⚠️ Ostrzeżenie: Plik bibliografia.csv nie został znaleziony. Źródła będą wyświetlane jako nazwy plików.")
-    biblio_map = {}
-
 def prepare_questions(df):
     questions_text = ""
     for index, row in df.iterrows():
@@ -243,65 +235,49 @@ def ask_hr_assistant(question):
         return "⚠️ Ekspert HR nie jest dostępny z powodu błędu inicjalizacji. Sprawdź logi serwera."
     try:
         response = hr_assistant.ask(question)
-        answer = f"🤖 **Ekspert HR:**\n\n{response['answer']}"
-        
-        sources = response.get('sources')
-        if sources:
-            answer += "\n\n📚 **Źródła:**\n"
-            
-            unique_sources = []
-            seen_filenames = set()
-            for source in sources:
-                filename = source.get('filename')
-                if filename and filename not in seen_filenames:
-                    seen_filenames.add(filename)
-                    unique_sources.append(source)
-            
-            for i, source in enumerate(unique_sources[:3], 1):
-                filename = source.get('filename', 'Nieznane źródło')
-                page = source.get('page', '?')
-                citation = biblio_map.get(filename, filename)  # Użyj mapowania lub nazwy pliku
-                answer += f"{i}. {citation}, s. {page}\n"
-                
+        answer = f"**Asystent HR:**\n\n{response['answer']}"
+        if response.get('sources'):
+            answer += f"\n\n📚 **Źródła:**\n"
+            for i, source in enumerate(response['sources'][:3], 1):  # Max 3 źródła
+                # Usunięcie nazwy pliku ze źródła
+                answer += f"{i}. str. {source.get('page', '?')}\n"
         return answer
     except Exception as e:
         return f"❌ Wystąpił błąd podczas komunikacji z ekspertem HR: {e}"
 
 # --- Interfejs Gradio ---
 with gr.Blocks(theme=gr.themes.Soft(primary_hue="blue", secondary_hue="orange"), title="KoREKtor") as demo:
-    gr.Image("logo-korektor.png", width=200, show_label=False)
+    gr.Image("logo-korektor.png", width=200, show_label=False, container=False, elem_id="logo")
 
-    # --- Analizator ogłoszeń ---
-    gr.Markdown("--- ")
-    gr.Markdown("## Analizator ogłoszeń\nPrzeanalizuj ogłoszenie pod kątem dostępności.")
-    with gr.Row():
-        with gr.Column(scale=1):
-            job_ad_input_text = gr.TextArea(label="Wklej treść ogłoszenia", lines=15)
-            job_ad_input_file = gr.File(label="lub wgraj plik (PDF/DOCX)", file_types=[".pdf", ".docx"])
-            analyze_button = gr.Button("Analizuj", variant="primary")
-        with gr.Column(scale=2):
-            json_output = gr.JSON(label="Wyniki analizy")
-            short_report_output = gr.File(label="Pobierz raport skrócony")
-            full_report_output = gr.File(label="Pobierz raport pełny")
+    with gr.Tab("Analizator ogłoszeń"):
+        gr.Markdown("## Przeanalizuj ogłoszenie pod kątem dostępności.")
+        with gr.Row():
+            with gr.Column(scale=1):
+                job_ad_input_text = gr.TextArea(label="Wklej treść ogłoszenia", lines=15)
+                job_ad_input_file = gr.File(label="lub wgraj plik (PDF/DOCX)", file_types=[".pdf", ".docx"])
+                analyze_button = gr.Button("Analizuj", variant="primary")
+            with gr.Column(scale=2):
+                json_output = gr.JSON(label="Wyniki analizy")
+                short_report_output = gr.File(label="Pobierz raport skrócony")
+                full_report_output = gr.File(label="Pobierz raport pełny")
 
-    analyze_button.click(
-        fn=analyze_job_ad,
-        inputs=[job_ad_input_text, job_ad_input_file],
-        outputs=[json_output, full_report_output, short_report_output]
-    )
+        analyze_button.click(
+            fn=analyze_job_ad,
+            inputs=[job_ad_input_text, job_ad_input_file],
+            outputs=[json_output, full_report_output, short_report_output]
+        )
 
-    # --- Asystent HR ---
-    gr.Markdown("--- ")
-    gr.Markdown("## Asystent HR\nZadaj pytanie ekspertowi HR.")
-    
-    question_input = gr.TextArea(label="Pytanie", placeholder="Zadaj pytanie...")
-    ask_button = gr.Button("Wyślij", variant="primary")
-    answer_output = gr.Markdown(label="Odpowiedź")
+    with gr.Tab("Asystent HR"):
+        gr.Markdown("## Zadaj pytanie ekspertowi HR.")
+        
+        question_input = gr.TextArea(label="Pytanie", placeholder="Zadaj pytanie...")
+        ask_button = gr.Button("Wyślij", variant="primary")
+        answer_output = gr.Markdown(label="Odpowiedź")
 
-    ask_button.click(
-        fn=ask_hr_assistant,
-        inputs=question_input,
-        outputs=answer_output
-    )
+        ask_button.click(
+            fn=ask_hr_assistant,
+            inputs=question_input,
+            outputs=answer_output
+        )
 
 demo.launch()
