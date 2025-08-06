@@ -239,8 +239,24 @@ def ask_hr_assistant(question):
         if response.get('sources'):
             answer += f"\n\n📚 **Źródła:**\n"
             for i, source in enumerate(response['sources'][:3], 1):  # Max 3 źródła
-                # Usunięcie nazwy pliku ze źródła
-                answer += f"{i}. str. {source.get('page', '?')}\n"
+                # Użyj pełnego opisu bibliograficznego
+                bibliography = source.get('bibliography', source.get('filename', ''))
+                page = source.get('page', '?')
+                section = source.get('section', '')
+                snippet = source.get('snippet', '')
+                
+                # Formatowanie źródła z pełnym opisem bibliograficznym
+                source_text = f"{i}. {bibliography}"
+                if page and page != '?':
+                    source_text += f", str. {page}"
+                if section and section != bibliography and section:
+                    source_text += f" - _{section}_"
+                
+                # Dodaj fragment tekstu dla kontekstu (opcjonalnie)
+                if snippet and len(snippet.strip()) > 10:
+                    source_text += f"\n   > _{snippet.strip()}_"
+                
+                answer += source_text + "\n"
         return answer
     except Exception as e:
         return f"❌ Wystąpił błąd podczas komunikacji z ekspertem HR: {e}"

@@ -22,6 +22,7 @@ from langchain_core.prompts import PromptTemplate
 # PDF processing
 import fitz  # PyMuPDF
 from sentence_transformers import SentenceTransformer
+import pandas as pd
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -250,6 +251,9 @@ class HRAssistant:
         self.pdf_directory = Path(pdf_directory)
         self._known_pdfs = set()
         self._pdf_mtimes = {}
+        
+        # Załaduj bibliografię z pliku CSV
+        self.bibliography = self._load_bibliography()
 
         # Inicjalizuj komponenty
         self.embeddings = OpenAIEmbeddings(
@@ -276,6 +280,29 @@ class HRAssistant:
         )
         self._load_and_process_documents()
         self._setup_qa_chain()
+
+    def _load_bibliography(self) -> Dict[str, str]:
+        """
+        Ładuje bibliografię z pliku bibliografia.csv.
+        Zwraca słownik mapujący nazwę pliku na pełny opis bibliograficzny.
+        """
+        bibliography_path = Path("bibliografia.csv")
+        if not bibliography_path.exists():
+            logger.warning("Plik bibliografia.csv nie istnieje. Będą używane nazwy plików.")
+            return {}
+        
+        try:
+            df = pd.read_csv(bibliography_path, delimiter=';')
+            bibliography = {}
+            for _, row in df.iterrows():
+                filename = row['filename']
+                opis = row['opis']
+                bibliography[filename] = opis
+            logger.info(f"Załadowano bibliografię dla {len(bibliography)} dokumentów")
+            return bibliography
+        except Exception as e:
+            logger.error(f"Błąd podczas ładowania bibliografii: {e}")
+            return {}
 
     def _list_pdf_files(self):
         return list(self.pdf_directory.glob("*.pdf"))
@@ -318,6 +345,11 @@ class HRAssistant:
             for doc in documents:
                 doc.metadata["filename"] = pdf_file.name
                 doc.metadata["file_stem"] = pdf_file.stem
+                # Dodaj pełny opis bibliograficzny jeśli dostępny
+                if pdf_file.name in self.bibliography:
+                    doc.metadata["bibliography"] = self.bibliography[pdf_file.name]
+                else:
+                    doc.metadata["bibliography"] = pdf_file.stem  # fallback na nazwę pliku
             all_documents.extend(documents)
         logger.info(f"Wyekstraktowano {len(all_documents)} sekcji")
         chunked_documents = self.chunker.chunk_documents(all_documents)
@@ -327,6 +359,13 @@ class HRAssistant:
             self.embeddings
         )
         logger.info("Baza wektorowa została utworzona")
+        
+        # Zaktualizuj zmienne śledzące pliki PDF po pomyślnym załadowaniu
+        self._known_pdfs = set()
+        self._pdf_mtimes = {}
+        for pdf_file in pdf_files:
+            self._known_pdfs.add(pdf_file.name)
+            self._pdf_mtimes[pdf_file.name] = pdf_file.stat().st_mtime
 
     def _reload_if_pdfs_changed(self):
         """
@@ -342,7 +381,7 @@ class HRAssistant:
         Zadaje pytanie asystentowi.
         """
         logger.info(f"Otrzymano pytanie: {question}")
-        self._reload_if_pdfs_changed()
+        # Usunięte automatyczne sprawdzanie zmian - baza ładowana tylko przy starcie
         try:
             result = self.qa_chain.invoke({
                 "question": question,
@@ -356,6 +395,7 @@ class HRAssistant:
             for doc in result.get("source_documents", []):
                 source_info = {
                     "filename": doc.metadata.get("filename", ""),
+                    "bibliography": doc.metadata.get("bibliography", doc.metadata.get("filename", "")),
                     "page": doc.metadata.get("page", ""),
                     "section": doc.metadata.get("section", ""),
                     "snippet": doc.page_content[:200] + "..." if len(doc.page_content) > 200 else doc.page_content
@@ -370,6 +410,20 @@ class HRAssistant:
                 "confidence": "low",
                 "error": str(e)
             }
+
+    def reload_knowledge_base(self):
+        """
+        Ręcznie przeładowuje bazę wiedzy (sprawdza zmiany w plikach PDF).
+        """
+        logger.info("Ręczne przeładowanie bazy wiedzy...")
+        if self._pdfs_changed():
+            logger.info("Wykryto zmiany w plikach PDF. Przeładowuję bazę wiedzy...")
+            self._load_and_process_documents()
+            self._setup_qa_chain()
+            return True
+        else:
+            logger.info("Brak zmian w plikach PDF.")
+            return False
 
     def get_stats(self) -> Dict[str, Any]:
         """
