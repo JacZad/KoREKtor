@@ -163,6 +163,26 @@ def create_report(result: pd.DataFrame) -> str:
         include_more=True
     )
 
+def process_analysis_results(response, matryca_df):
+    """Przetwarza wyniki analizy z LLM i buduje DataFrame."""
+    rows = []
+    for i, answer_obj in enumerate(response.answers):
+        if answer_obj.answer in {"TAK", "NIE"}:
+            answer = answer_obj.answer
+            # Inwersja odpowiedzi dla pytania nr 10, zgodnie z logiką matrycy.
+            if i == 9:
+                answer = "NIE" if answer == "TAK" else "TAK"
+                
+            new_row = {
+                'area': matryca_df.area[i],
+                'answer': answer,
+                'citation': answer_obj.citation,
+                'content': matryca_df.true[i] if answer == 'TAK' else matryca_df.false[i],
+                'more': matryca_df.more[i]
+            }
+            rows.append(new_row)
+    return pd.DataFrame(rows)
+
 def analyze_job_ad(job_ad, file):
     if not job_ad and not file:
         return None, None, None
@@ -190,30 +210,11 @@ def analyze_job_ad(job_ad, file):
         response = chain.invoke({"job_ad": job_ad, "questions": questions})
     
         # Krok 4: Przetwarzanie odpowiedzi i budowanie DataFrame
-        rows = []
-        for i, answer_obj in enumerate(response.answers):
-            if answer_obj.answer in {"TAK", "NIE"}:
-                answer = answer_obj.answer
-                # Inwersja odpowiedzi dla pytania nr 10, zgodnie z logiką matrycy.
-                if i == 9:
-                    answer = "NIE" if answer == "TAK" else "TAK"
-                    
-                new_row = {
-                    'area': matryca_df.area[i],
-                    'answer': answer,
-                    'citation': answer_obj.citation,
-                    'content': matryca_df.true[i] if answer == 'TAK' else matryca_df.false[i],
-                    'more': matryca_df.more[i]
-                }
-                rows.append(new_row)
-        
-        output_df = pd.DataFrame(rows)
+        output_df = process_analysis_results(response, matryca_df)
     
         # Krok 5: Generowanie raportów i wyniku JSON
         short_word_file_path = create_short_report(output_df)
         word_file_path = create_report(output_df)
-        # Wynik JSON jest tworzony na podstawie przetworzonych danych i udostępniany w interfejsie.
-        # Struktura: lista obiektów, gdzie każdy obiekt to jeden wiersz analizy.
         json_output = output_df.to_dict(orient="records")
         
         return json_output, word_file_path, short_word_file_path
