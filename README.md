@@ -6,57 +6,86 @@
 
 ---
 
-## Główne Funkcje
+## 🎯 Główne Funkcje
 
-### 1. Analizator Ogłoszeń o Pracę
+### 1. 📋 Analizator Ogłoszeń o Pracę
 
 Moduł ten pozwala na automatyczną analizę ogłoszeń o pracę pod kątem ich dostępności i potencjalnych barier dla kandydatów z niepełnosprawnościami. Użytkownik może wkleić tekst ogłoszenia lub wgrać plik w formacie PDF/DOCX.
 
-- **Inteligentna Analiza:** Wykorzystuje duży model językowy (LLM) do oceny treści na podstawie predefiniowanej matrycy kryteriów.
-- **Generowanie Raportów:** Tworzy dwa rodzaje raportów w formacie `.docx`:
+- **🧠 Inteligentna Analiza:** Wykorzystuje duży model językowy (LLM) do oceny treści na podstawie predefiniowanej matrycy kryteriów.
+- **📄 Generowanie Raportów:** Tworzy dwa rodzaje raportów w formacie `.docx`:
   - **Raport Skrócony:** Zawiera kluczowe rekomendacje i podsumowanie.
   - **Raport Pełny:** Oferuje szczegółową analizę każdego punktu z matrycy, wraz z cytatami i sugestiami.
-- **Wyniki w Formacie JSON:** Udostępnia wyniki w formacie JSON do dalszej analizy lub integracji.
+- **📊 Wyniki w Formacie JSON:** Udostępnia wyniki w formacie JSON do dalszej analizy lub integracji.
 
-### 2. Asystent HR
+### 2. 🤖 Asystent HR
 
-To interaktywny chatbot oparty na wiedzy z wbudowanej bazy dokumentów (poradników, raportów, dobrych praktyk). Asystent odpowiada na pytania związane z zatrudnianiem, rekrutacją i zarządzaniem pracownikami z niepełnosprawnościami w Polsce.
+To interaktywny chatbot oparty na wiedzy z wbudowanej bazy dokumentów (poradników, raportów, dobrych praktyk) **oraz aktualnych informacji ze stron internetowych PFRON**. Asystent odpowiada na pytania związane z zatrudnianiem, rekrutacją i zarządzaniem pracownikami z niepełnosprawnościami w Polsce.
 
-- **Baza Wiedzy:** Opiera się na starannie wyselekcjonowanych plikach PDF.
-- **Precyzyjne Odpowiedzi:** Dzięki mechanizmowi RAG (Retrieval-Augmented Generation) odpowiedzi są kontekstowe i bazują na treści dokumentów.
-- **Cytowanie Źródeł:** Każda odpowiedź zawiera odwołania do konkretnych dokumentów i numerów stron, co zapewnia wiarygodność.
+- **📚 Baza Wiedzy:** Opiera się na starannie wyselekcjonowanych plikach PDF z pełną bibliografią **oraz treściach ze stron PFRON**
+- **🌐 Aktualne Informacje:** Automatycznie ładuje treści z 21 stron PFRON z pliku `urls.txt`
+- **🎯 Precyzyjne Odpowiedzi:** Dzięki mechanizmowi RAG (Retrieval-Augmented Generation) odpowiedzi są kontekstowe i bazują na treści dokumentów oraz stron internetowych
+- **📖 Cytowanie Źródeł:** Każda odpowiedź zawiera pełne opisy bibliograficzne dokumentów z numerami stron i sekcjami oraz linki do stron internetowych
+- **⚡ Optymalizacja Wydajności:** Baza wiedzy jest ładowana tylko raz przy starcie, co zapewnia szybkie odpowiedzi
 
 ---
 
-## Instalacja i Uruchomienie
+## 🚀 Najnowsze Funkcje (v2.0)
 
-1.  **Klonowanie Repozytorium:**
-    ```bash
-    git clone <adres-repozytorium>
-    cd korektor2
-    ```
+### ✨ Inteligentne Cytowanie Źródeł
+- **📖 Pełne Opisy Bibliograficzne:** System automatycznie ładuje pełne cytowania z pliku `bibliografia.csv`
+- **🔍 Precyzyjne Lokalizacje:** Każde źródło zawiera dokładny numer strony i sekcję dokumentu
+- **🎯 Czytelne Formatowanie:** Źródła wyświetlane są w eleganckim formacie bez fragmentów tekstu
 
-2.  **Utworzenie i Aktywacja Środowiska Wirtualnego:**
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate
-    ```
+### ⚡ Optymalizacja Wydajności
+- **🚫 Koniec Ponownego Ładowania:** Baza wiedzy jest tworzona tylko raz przy starcie aplikacji
+- **🔄 Inteligentne Cache'owanie:** System pamięta przetworzony stan dokumentów PDF
+- **📊 Monitoring Zmian:** Opcjonalne ręczne przeładowanie przy dodaniu nowych dokumentów
 
-3.  **Instalacja Zależności:**
-    ```bash
-    pip install -r requirements.txt
-    ```
+### 📚 Zarządzanie Bibliografią
+- **📋 Centralna Baza Opisów:** Plik `bibliografia.csv` zawiera pełne opisy wszystkich dokumentów
+- **🔧 Łatwa Aktualizacja:** Wystarczy edytować plik CSV aby zmienić cytowania
+- **📖 Profesjonalne Standardy:** Zgodność z akademickimi standardami cytowania
 
-4.  **Ustawienie Klucza API OpenAI:**
-    ```bash
-    export OPENAI_API_KEY="<Twój-klucz-API>"
-    ```
+---
 
-5.  **Uruchomienie Aplikacji:**
-    ```bash
-    python3 app.py
-    ```
-    Aplikacja będzie dostępna pod adresem: `http://127.0.0.1:7860`.
+## ⚡ Jak Uruchomić
+
+1. **Klonowanie Repozytorium:**
+   
+   ```bash
+   git clone [URL_REPOZYTORIUM]
+   cd korektor2
+   ```
+
+2. **Utworzenie i Aktywacja Środowiska Wirtualnego:**
+   
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # macOS/Linux
+   # lub
+   venv\Scripts\activate  # Windows
+   ```
+
+3. **Instalacja Zależności:**
+   
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Ustawienie Klucza API OpenAI:**
+   
+   ```bash
+   export OPENAI_API_KEY="twój_klucz_api_openai"
+   ```
+
+5. **Uruchomienie Aplikacji:**
+   
+   ```bash
+   python app.py
+   ```
+   
+6. **Otwórz Przeglądarkę:** Przejdź pod adres `http://localhost:7860`
 
 ---
 
@@ -179,22 +208,73 @@ else:
 
 ---
 
-## Pliki Danych
+## 📁 Pliki Danych
 
--   **`matryca.csv`**: Kluczowy plik dla analizatora ogłoszeń. Każdy wiersz definiuje jedno kryterium oceny, zawierając m.in. treść pytania do modelu LLM oraz szablony odpowiedzi.
--   **`bibliografia.csv`**: Plik mapujący nazwy plików PDF na pełne opisy bibliograficzne, używane w odpowiedziach Asystenta HR.
+- **`matryca.csv`**: Kluczowy plik dla analizatora ogłoszeń. Każdy wiersz definiuje jedno kryterium oceny, zawierając m.in. treść pytania do modelu LLM oraz szablony odpowiedzi.
+- **`bibliografia.csv`**: **NOWE!** 📚 Plik mapujący nazwy plików PDF na pełne opisy bibliograficzne, używane w odpowiedziach Asystenta HR. Format: `opis;filename`
+- **`template.docx`**: Szablon Microsoft Word używany do generowania raportów analizy ogłoszeń.
+- **`pdfs/`**: Katalog zawierający dokumenty bazy wiedzy (poradniki, raporty, przepisy prawne).
+
+### Przykład `bibliografia.csv`:
+```csv
+opis;filename
+"Gruszczyńska A., Gruntowski M., Osoba z niepełnosprawnością w Twojej firmie, Fundacja Aktywizacja, Warszawa 2024";Niezbednik-pracodawcy-online.pdf
+"Kotowska L.; Prawo pracy. Pracownik niepełnosprawny; Państwowa Inspekcja Pracy; wydanie 2/2024";Wydawnictwo PIP - Niepelnosprawny pracownik.pdf
+```
 
 ---
 
-## Zależności
+## 🛠️ Zależności
 
 Projekt korzysta z następujących głównych bibliotek (pełna lista w `requirements.txt`):
 
--   `gradio`: Do budowy interfejsu webowego.
--   `langchain` i `langchain-openai`: Do interakcji z modelami językowymi.
--   `pandas`: Do wczytywania i przetwarzania danych z plików CSV.
--   `python-docx`: Do generowania raportów w formacie DOCX.
--   `pypdf` i `docx2txt`: Do odczytu treści z plików.
--   `faiss-cpu`: Do tworzenia wektorowej bazy danych.
--   `tiktoken`: Do tokenizacji tekstu.
--   `pymupdf` i `sentence-transformers`: Do inteligentnego dzielenia dokumentów PDF na fragmenty.
+- **Interface i Backend:**
+  - `gradio`: Do budowy interfejsu webowego
+  - `pandas`: Do przetwarzania danych CSV
+
+- **AI i NLP:**
+  - `langchain` i `langchain-openai`: Framework do pracy z modelami językowymi
+  - `faiss-cpu`: Wektorowa baza danych do przeszukiwania semantycznego
+  - `tiktoken`: Tokenizacja tekstu dla OpenAI
+
+- **Przetwarzanie Dokumentów:**
+  - `python-docx`: Generowanie raportów Word
+  - `pypdf` i `docx2txt`: Odczyt plików PDF/DOCX
+  - `pymupdf`: Inteligentna ekstrakcja tekstu z PDF
+  - `sentence-transformers`: Zaawansowane embeddingi tekstowe
+
+---
+
+## 🔧 Konfiguracja
+
+### Zmienne Środowiskowe
+```bash
+export OPENAI_API_KEY="sk-..." # Klucz API OpenAI (wymagany)
+```
+
+### Struktura Katalogów
+```
+pdfs/           # Dokumenty bazy wiedzy (PDF)
+├── dokument1.pdf
+├── dokument2.pdf
+└── ...
+```
+
+### Pliki Konfiguracyjne
+## 📚 Dokumentacja
+
+- **`README.md`** - Ten plik - główny przewodnik użytkownika
+- **`CHANGELOG.md`** - Historia zmian i nowych funkcji
+- **`DEVELOPER.md`** - Dokumentacja techniczna dla deweloperów
+- **`project_description.md`** - Szczegółowy opis projektu i architektury
+
+## 🤝 Wsparcie
+
+W przypadku problemów lub pytań:
+1. Sprawdź sekcję **Debugowanie** w `DEVELOPER.md`
+2. Przejrzyj **Changelog** w `CHANGELOG.md`
+3. Sprawdź logi aplikacji w konsoli
+
+## 📄 Licencja
+
+CC-BY-SA-4.0 - szczegóły w pliku LICENSE

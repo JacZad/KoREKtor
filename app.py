@@ -243,7 +243,6 @@ def ask_hr_assistant(question):
                 bibliography = source.get('bibliography', source.get('filename', ''))
                 page = source.get('page', '?')
                 section = source.get('section', '')
-                snippet = source.get('snippet', '')
                 
                 # Formatowanie źródła z pełnym opisem bibliograficznym
                 source_text = f"{i}. {bibliography}"
@@ -251,10 +250,6 @@ def ask_hr_assistant(question):
                     source_text += f", str. {page}"
                 if section and section != bibliography and section:
                     source_text += f" - _{section}_"
-                
-                # Dodaj fragment tekstu dla kontekstu (opcjonalnie)
-                if snippet and len(snippet.strip()) > 10:
-                    source_text += f"\n   > _{snippet.strip()}_"
                 
                 answer += source_text + "\n"
         return answer

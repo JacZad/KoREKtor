@@ -11,3 +11,5 @@ pypdf
 PyMuPDF
 sentence-transformers
 faiss-cpu
+requests
+beautifulsoup4

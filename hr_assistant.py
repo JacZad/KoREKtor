@@ -1,6 +1,7 @@
 """
 Asystent HR dla pracodawców zatrudniających osoby z niepełnosprawnościami.
-Wykorzystuje dokumenty PDF jako bazę wiedzy z wektorową bazą danych w pamięci.
+Wykorzystuje dokumenty PDF oraz treści ze stron internetowych jako bazę wiedzy 
+z wektorową bazą danych w pamięci.
 """
 
 import os
@@ -23,6 +24,11 @@ from langchain_core.prompts import PromptTemplate
 import fitz  # PyMuPDF
 from sentence_transformers import SentenceTransformer
 import pandas as pd
+
+# Web scraping for URLs
+import requests
+from bs4 import BeautifulSoup
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -190,13 +196,15 @@ class HRAssistant:
     """
     Asystent HR dla pracodawców zatrudniających osoby z niepełnosprawnościami.
 
-    Wykorzystuje dokumenty PDF jako bazę wiedzy, przetwarza je na wektorową bazę danych (FAISS),
-    a następnie umożliwia zadawanie pytań w języku polskim z konwersacyjną pamięcią kontekstu.
+    Wykorzystuje dokumenty PDF oraz treści ze stron internetowych jako bazę wiedzy, 
+    przetwarza je na wektorową bazę danych (FAISS), a następnie umożliwia zadawanie 
+    pytań w języku polskim z konwersacyjną pamięcią kontekstu.
     Odpowiedzi generowane są przez model OpenAI GPT na podstawie treści dokumentów.
 
     Parametry:
         openai_api_key (str): Klucz API do OpenAI.
         pdf_directory (str): Ścieżka do katalogu z plikami PDF.
+        urls_file (str): Ścieżka do pliku z listą URLs do załadowania.
     """
 
     def _setup_qa_chain(self):
@@ -213,18 +221,19 @@ class HRAssistant:
 
         prompt_template = (
             "Jesteś ekspertem HR specjalizującym się w zatrudnianiu osób z niepełnosprawnościami w Polsce.\n"
-            "Twoja wiedza opiera się na oficjalnych dokumentach i poradnikach dla pracodawców.\n\n"
+            "Twoja wiedza opiera się na oficjalnych dokumentach, poradnikach dla pracodawców oraz aktualnych informacjach ze stron PFRON.\n\n"
             "Kontekst z dokumentów:\n{context}\n\n"
             "Historia rozmowy:\n{chat_history}\n\n"
             "Pytanie: {question}\n\n"
             "Instrukcje:\n"
             "1. Odpowiadaj w języku polskim\n"
-            "2. Bazuj wyłącznie na informacjach z dostarczonych dokumentów\n"
+            "2. Bazuj wyłącznie na informacjach z dostarczonych dokumentów i stron internetowych\n"
             "3. Jeśli nie masz informacji w dokumentach, powiedz to wprost\n"
             "4. Podawaj konkretne, praktyczne porady\n"
             "5. Odwołuj się do konkretnych przepisów prawnych gdy to możliwe\n"
             "6. Bądź pomocny i profesjonalny\n"
-            "7. Gdy to możliwe, podaj źródło informacji (nazwę dokumentu)\n\n"
+            "7. Gdy to możliwe, podaj źródło informacji (nazwę dokumentu lub stronę internetową)\n"
+            "8. Dla informacji ze stron internetowych podaj datę dostępu jeśli jest dostępna\n\n"
             "Odpowiedź:"
         )
         custom_prompt = PromptTemplate(
@@ -246,9 +255,10 @@ class HRAssistant:
     Asystent HR dla pracodawców zatrudniających osoby z niepełnosprawnościami.
     """
     
-    def __init__(self, openai_api_key: str, pdf_directory: str = "pdfs"):
+    def __init__(self, openai_api_key: str, pdf_directory: str = "pdfs", urls_file: str = "urls.txt"):
         self.openai_api_key = openai_api_key
         self.pdf_directory = Path(pdf_directory)
+        self.urls_file = urls_file
         self._known_pdfs = set()
         self._pdf_mtimes = {}
         
@@ -307,6 +317,111 @@ class HRAssistant:
     def _list_pdf_files(self):
         return list(self.pdf_directory.glob("*.pdf"))
 
+    def _load_url_documents(self) -> List[Document]:
+        """
+        Pobiera i przetwarza treści ze stron internetowych z pliku URLs.
+        """
+        if not os.path.exists(self.urls_file):
+            logger.warning(f"Plik '{self.urls_file}' nie został znaleziony. Pomijam ładowanie URLs.")
+            return []
+        
+        try:
+            with open(self.urls_file, 'r', encoding='utf-8') as f:
+                urls = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+        except Exception as e:
+            logger.error(f"Błąd podczas odczytu pliku {self.urls_file}: {e}")
+            return []
+        
+        if not urls:
+            logger.info("Brak URLs do przetworzenia.")
+            return []
+
+        logger.info(f"Znaleziono {len(urls)} adresów URL do przetworzenia.")
+        url_documents = []
+        
+        for url in urls:
+            try:
+                logger.info(f"Pobieranie: {url}")
+                response = requests.get(
+                    url, 
+                    timeout=15, 
+                    headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+                )
+                response.raise_for_status()
+                
+                soup = BeautifulSoup(response.content, 'html.parser')
+                title = soup.find('title').get_text().strip() if soup.find('title') else 'Brak tytułu'
+                content = self._extract_url_content(soup)
+                
+                if content and len(content.strip()) > 50:  # Minimum content threshold
+                    metadata = {
+                        'source': url,
+                        'title': title,
+                        'type': 'website',
+                        'added_date': datetime.now().strftime("%Y-%m-%d"),
+                        'bibliography': f"PFRON, {title}, dostęp: {datetime.now().strftime('%d.%m.%Y')}, {url}"
+                    }
+                    
+                    # Check if contains financial data
+                    if re.search(r'\d+(?:[.,]\d+)?\s*(?:zł|PLN|złot)', content, re.IGNORECASE):
+                        metadata["contains_financial_data"] = True
+                    
+                    url_documents.append(Document(
+                        page_content=content, 
+                        metadata=metadata
+                    ))
+                    logger.info(f"Pobrano treść: {len(content)} znaków")
+                else:
+                    logger.warning(f"Brak wystarczającej treści dla: {url}")
+                    
+            except requests.RequestException as e:
+                logger.error(f"Błąd podczas pobierania {url}: {e}")
+            except Exception as e:
+                logger.error(f"Nieoczekiwany błąd podczas przetwarzania {url}: {e}")
+        
+        logger.info(f"Pomyślnie pobrano {len(url_documents)} dokumentów z URLs")
+        return url_documents
+
+    def _extract_url_content(self, soup: BeautifulSoup) -> str:
+        """
+        Wyodrębnia główną treść ze strony internetowej.
+        Próbuje różnych selektorów CSS aby znaleźć główną treść.
+        """
+        # Selektory specyficzne dla stron PFRON
+        selectors = [
+            '.csc-textpic-text.article-content',  # Główny selektor dla PFRON
+            '.frame.default',
+            '.csc-default', 
+            'article', 
+            'main', 
+            '.content', 
+            '#content',
+            '.main-content',
+            '.page-content'
+        ]
+        
+        for selector in selectors:
+            elements = soup.select(selector)
+            if elements:
+                # Połącz tekst z wszystkich znalezionych elementów
+                content_parts = []
+                for element in elements:
+                    text = element.get_text(separator='\n', strip=True)
+                    if text and len(text) > 20:  # Ignore very short content
+                        content_parts.append(text)
+                
+                if content_parts:
+                    return '\n\n'.join(content_parts)
+        
+        # Fallback - pobierz tekst z body
+        if soup.body:
+            # Remove script and style elements
+            for script in soup.body(["script", "style", "nav", "footer", "header"]):
+                script.decompose()
+            return soup.body.get_text(separator='\n', strip=True)
+        
+        return ""
+
     def _pdfs_changed(self) -> bool:
         """
         Sprawdza, czy pojawiły się nowe pliki PDF lub zmieniły się istniejące.
@@ -329,31 +444,46 @@ class HRAssistant:
 
     def _load_and_process_documents(self):
         """
-        Ładuje i przetwarza dokumenty PDF.
+        Ładuje i przetwarza dokumenty PDF oraz treści z URLs.
         """
-        logger.info("Ładowanie dokumentów PDF...")
+        logger.info("Ładowanie dokumentów PDF i treści z URLs...")
 
+        # Ładowanie PDF
         pdf_files = self._list_pdf_files()
         if not pdf_files:
-            raise ValueError(f"Nie znaleziono plików PDF w katalogu: {self.pdf_directory}")
-
-        logger.info(f"Znaleziono {len(pdf_files)} plików PDF")
+            logger.warning(f"Nie znaleziono plików PDF w katalogu: {self.pdf_directory}")
+        
         all_documents = []
-        for pdf_file in pdf_files:
-            logger.info(f"Przetwarzanie: {pdf_file.name}")
-            documents = self.chunker._extract_pdf_structure(str(pdf_file))
-            for doc in documents:
-                doc.metadata["filename"] = pdf_file.name
-                doc.metadata["file_stem"] = pdf_file.stem
-                # Dodaj pełny opis bibliograficzny jeśli dostępny
-                if pdf_file.name in self.bibliography:
-                    doc.metadata["bibliography"] = self.bibliography[pdf_file.name]
-                else:
-                    doc.metadata["bibliography"] = pdf_file.stem  # fallback na nazwę pliku
-            all_documents.extend(documents)
-        logger.info(f"Wyekstraktowano {len(all_documents)} sekcji")
+        
+        # Przetwarzanie plików PDF
+        if pdf_files:
+            logger.info(f"Znaleziono {len(pdf_files)} plików PDF")
+            for pdf_file in pdf_files:
+                logger.info(f"Przetwarzanie PDF: {pdf_file.name}")
+                documents = self.chunker._extract_pdf_structure(str(pdf_file))
+                for doc in documents:
+                    doc.metadata["filename"] = pdf_file.name
+                    doc.metadata["file_stem"] = pdf_file.stem
+                    # Dodaj pełny opis bibliograficzny jeśli dostępny
+                    if pdf_file.name in self.bibliography:
+                        doc.metadata["bibliography"] = self.bibliography[pdf_file.name]
+                    else:
+                        doc.metadata["bibliography"] = pdf_file.stem  # fallback na nazwę pliku
+                all_documents.extend(documents)
+            logger.info(f"Wyekstraktowano {len(all_documents)} sekcji z PDF")
+        
+        # Ładowanie treści z URLs
+        url_documents = self._load_url_documents()
+        all_documents.extend(url_documents)
+        
+        if not all_documents:
+            raise ValueError("Nie znaleziono żadnych dokumentów do przetworzenia (ani PDF ani URLs)")
+        
+        logger.info(f"Łącznie dokumentów do przetworzenia: {len(all_documents)} (PDF: {len(all_documents) - len(url_documents)}, URLs: {len(url_documents)})")
+        
         chunked_documents = self.chunker.chunk_documents(all_documents)
         logger.info(f"Utworzono {len(chunked_documents)} chunków")
+        
         self.vectorstore = FAISS.from_documents(
             chunked_documents,
             self.embeddings
@@ -429,9 +559,19 @@ class HRAssistant:
         """
         Zwraca statystyki asystenta.
         """
+        # Policz URLs z pliku
+        url_count = 0
+        if os.path.exists(self.urls_file):
+            try:
+                with open(self.urls_file, 'r', encoding='utf-8') as f:
+                    url_count = len([line.strip() for line in f if line.strip() and not line.startswith('#')])
+            except:
+                pass
+        
         return {
             "total_documents": self.vectorstore.index.ntotal if self.vectorstore else 0,
             "pdf_files": len(self._list_pdf_files()),
+            "url_sources": url_count,
             "memory_messages": len(self.memory.chat_memory.messages),
             "model": "gpt-4o-mini",
             "embedding_model": "text-embedding-3-small"
