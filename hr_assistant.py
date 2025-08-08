@@ -27,6 +27,7 @@ import pandas as pd
 
 from web_loader import load_url_documents
 from pdf_chunker import IntelligentPDFChunker
+from vector_stats import VectorStoreAnalyzer, analyze_vector_store, print_vector_stats
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -226,6 +227,17 @@ class HRAssistant:
         )
         logger.info("Baza wektorowa została utworzona")
         
+        # Wyświetl statystyki bazy wektorowej
+        stats = analyze_vector_store(self.vectorstore)
+        logger.info(f"Statystyki bazy: {stats['vectors_count']:,} wektorów, "
+                   f"{stats['memory_size_mb']} MB, kategoria: {stats['size_category']}")
+        
+        # Wyświetl ostrzeżenia dla dużych baz
+        if stats.get('memory_size_mb', 0) > 500:
+            logger.warning("Duża baza wektorowa - rozważ optymalizację!")
+            for rec in stats.get('recommendations', []):
+                logger.info(f"Rekomendacja: {rec}")
+        
         # Zaktualizuj zmienne śledzące pliki PDF po pomyślnym załadowaniu
         self._known_pdfs = set()
         self._pdf_mtimes = {}
@@ -259,13 +271,43 @@ class HRAssistant:
                 "confidence": "medium"
             }
             for doc in result.get("source_documents", []):
-                source_info = {
-                    "filename": doc.metadata.get("filename", ""),
-                    "bibliography": doc.metadata.get("bibliography", doc.metadata.get("filename", "")),
-                    "page": doc.metadata.get("page", ""),
-                    "section": doc.metadata.get("section", ""),
-                    "snippet": doc.page_content[:200] + "..." if len(doc.page_content) > 200 else doc.page_content
-                }
+                # Pobierz podstawowe metadane
+                source_url = doc.metadata.get("source", "")
+                title = doc.metadata.get("title", "")
+                filename = doc.metadata.get("filename", "")
+                
+                # Formatowanie dla źródeł URL vs PDF
+                if source_url.startswith("https://"):
+                    # Dla URL - użyj tytułu jako nazwy wyświetlanej (skróć długie tytuły PFRON)
+                    raw_title = title if title else source_url
+                    # Usuń zbędną część tytułu PFRON
+                    clean_title = raw_title.replace(" - Państwowy Fundusz Rehabilitacji Osób Niepełnosprawnych", "")
+                    display_name = clean_title
+                    
+                    source_info = {
+                        "type": "url",
+                        "url": source_url,
+                        "title": clean_title,
+                        "display_name": display_name,
+                        "filename": "",
+                        "bibliography": doc.metadata.get("bibliography", f"{clean_title} - {source_url}"),
+                        "page": "",
+                        "section": doc.metadata.get("section", ""),
+                        "snippet": doc.page_content[:200] + "..." if len(doc.page_content) > 200 else doc.page_content
+                    }
+                else:
+                    # Dla PDF - standardowe formatowanie
+                    source_info = {
+                        "type": "pdf",
+                        "url": "",
+                        "title": title,
+                        "display_name": filename,
+                        "filename": filename,
+                        "bibliography": doc.metadata.get("bibliography", filename),
+                        "page": doc.metadata.get("page", ""),
+                        "section": doc.metadata.get("section", ""),
+                        "snippet": doc.page_content[:200] + "..." if len(doc.page_content) > 200 else doc.page_content
+                    }
                 response["sources"].append(source_info)
             return response
         except Exception as e:
@@ -319,3 +361,16 @@ class HRAssistant:
         """
         self.memory.clear()
         logger.info("Pamięć konwersacji została wyczyszczona")
+    
+    def get_vector_stats(self):
+        """Zwraca statystyki bazy wektorowej."""
+        if not self.vectorstore:
+            return {"error": "Baza wektorowa nie została zainicjalizowana"}
+        return analyze_vector_store(self.vectorstore)
+    
+    def print_vector_stats(self):
+        """Wyświetla sformatowane statystyki bazy wektorowej."""
+        if not self.vectorstore:
+            print("❌ Baza wektorowa nie została zainicjalizowana")
+            return
+        print_vector_stats(self.vectorstore)

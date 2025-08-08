@@ -240,17 +240,29 @@ def ask_hr_assistant(question):
         if response.get('sources'):
             answer += f"\n\n📚 **Źródła:**\n"
             for i, source in enumerate(response['sources'][:3], 1):  # Max 3 źródła
-                # Użyj pełnego opisu bibliograficznego
-                bibliography = source.get('bibliography', source.get('filename', ''))
-                page = source.get('page', '?')
-                section = source.get('section', '')
-                
-                # Formatowanie źródła z pełnym opisem bibliograficznym
-                source_text = f"{i}. {bibliography}"
-                if page and page != '?':
-                    source_text += f", str. {page}"
-                if section and section != bibliography and section:
-                    source_text += f" - _{section}_"
+                # Rozróżnij między URL a PDF
+                if source.get('type') == 'url' and source.get('url'):
+                    # Dla URL - stwórz link z tytułem
+                    title = source.get('title', 'Strona internetowa')
+                    url = source.get('url')
+                    source_text = f"{i}. [{title}]({url})"
+                    
+                    # Dodaj sekcję jeśli istnieje
+                    section = source.get('section', '')
+                    if section and section != title:
+                        source_text += f" - _{section}_"
+                        
+                else:
+                    # Dla PDF - standardowe formatowanie
+                    bibliography = source.get('bibliography', source.get('filename', ''))
+                    page = source.get('page', '?')
+                    section = source.get('section', '')
+                    
+                    source_text = f"{i}. {bibliography}"
+                    if page and page != '?':
+                        source_text += f", str. {page}"
+                    if section and section != bibliography and section:
+                        source_text += f" - _{section}_"
                 
                 answer += source_text + "\n"
         return answer
