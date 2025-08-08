@@ -6,7 +6,9 @@ import hashlib
 import json
 import pickle
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, TYPE_CHECKING
+if TYPE_CHECKING:
+    from hr_assistant import HRAssistant
 import logging
 from datetime import datetime
 

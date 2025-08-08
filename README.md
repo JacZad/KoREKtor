@@ -36,16 +36,25 @@ To interaktywny chatbot oparty na wiedzy z wbudowanej bazy dokumentów (poradnik
 - **📖 Pełne Opisy Bibliograficzne:** System automatycznie ładuje pełne cytowania z pliku `bibliografia.csv`
 - **🔍 Precyzyjne Lokalizacje:** Każde źródło zawiera dokładny numer strony i sekcję dokumentu
 - **🎯 Czytelne Formatowanie:** Źródła wyświetlane są w eleganckim formacie bez fragmentów tekstu
+- **🔗 Klikalne Linki URL:** Źródła internetowe wyświetlane jako klikalne linki z czystymi tytułami
 
 ### ⚡ Optymalizacja Wydajności
 - **🚫 Koniec Ponownego Ładowania:** Baza wiedzy jest tworzona tylko raz przy starcie aplikacji
 - **🔄 Inteligentne Cache'owanie:** System pamięta przetworzony stan dokumentów PDF
 - **📊 Monitoring Zmian:** Opcjonalne ręczne przeładowanie przy dodaniu nowych dokumentów
+- **💾 Statystyki Bazy Wektorowej:** Monitoring rozmiaru i wydajności bazy (18.05 MB, kategoria: mała)
 
 ### 📚 Zarządzanie Bibliografią
 - **📋 Centralna Baza Opisów:** Plik `bibliografia.csv` zawiera pełne opisy wszystkich dokumentów
 - **🔧 Łatwa Aktualizacja:** Wystarczy edytować plik CSV aby zmienić cytowania
 - **📖 Profesjonalne Standardy:** Zgodność z akademickimi standardami cytowania
+
+### 🏗️ Refaktoryzacja Architektury (v2.1)
+- **🔧 Modularna Struktura:** Kod podzielony na specjalizowane komponenty (DocumentManager, Config)
+- **🧪 Łatwiejsze Testowanie:** 14 testów jednostkowych, możliwość mockowania komponentów
+- **⚙️ Centralna Konfiguracja:** Wszystkie parametry w jednym miejscu z walidacją
+- **🔄 Kompatybilność Wsteczna:** Zachowana pełna kompatybilność API z poprzednią wersją
+- **🚀 Przygotowanie na Przyszłość:** Architektura gotowa na async processing i nowe funkcje
 
 ---
 
@@ -196,14 +205,25 @@ else:
 
 ```
 /Users/jacek/korektor2/
-├── app.py                # Główny plik aplikacji Gradio
-├── hr_assistant.py       # Logika asystenta HR i obsługi bazy wiedzy
-├── requirements.txt      # Lista zależności Python
-├── matryca.csv           # Matryca kryteriów dla analizatora ogłoszeń
-├── bibliografia.csv      # Dane bibliograficzne dla źródeł
-├── template.docx         # Szablon dla generowanych raportów
-├── pdfs/                 # Katalog z dokumentami bazy wiedzy
-└── README.md             # Ta dokumentacja
+├── app.py                    # Główny plik aplikacji Gradio
+├── hr_assistant.py           # Logika asystenta HR (wersja oryginalna)
+├── hr_assistant_v2.py        # Zrefaktoryzowana wersja asystenta HR
+├── document_manager.py       # Zarządzanie dokumentami PDF i URL
+├── config.py                 # Centralna konfiguracja aplikacji
+├── vector_stats.py           # Statystyki i monitoring bazy wektorowej
+├── vector_optimization.py    # Optymalizacja i cache'owanie wektorów
+├── requirements.txt          # Lista zależności Python
+├── matryca.csv              # Matryca kryteriów dla analizatora ogłoszeń
+├── bibliografia.csv         # Dane bibliograficzne dla źródeł
+├── urls.txt                 # Lista URL źródeł PFRON
+├── template.docx            # Szablon dla generowanych raportów
+├── pdfs/                    # Katalog z dokumentami bazy wiedzy
+├── faiss_cache/             # Cache bazy wektorowej (auto-generated)
+├── test_refactoring.py      # Testy jednostkowe nowej architektury
+├── refactoring_examples.py  # Przykłady użycia nowej architektury
+├── migrate_to_v2.py         # Skrypt migracji na nową architekturę
+├── REFACTORING_PROPOSALS.md # Propozycje i analiza refaktoryzacji
+└── README.md                # Ta dokumentacja
 ```
 
 ---
@@ -245,7 +265,73 @@ Projekt korzysta z następujących głównych bibliotek (pełna lista w `require
 
 ---
 
-## 🔧 Konfiguracja
+## � Migracja na Nową Architekturę
+
+KoREKtor oferuje zrefaktoryzowaną architekturę (v2.1) z lepszą modularyzacją i testowalnocią, zachowując pełną kompatybilność wsteczną.
+
+### 🎯 Opcje Przełączenia
+
+#### 1. Stopniowe Przejście (Zalecane)
+```python
+# W app.py - dodaj na górze:
+USE_NEW_ARCHITECTURE = False  # Ustaw True gdy chcesz przełączyć
+
+if USE_NEW_ARCHITECTURE:
+    from hr_assistant_v2 import HRAssistantV2 as HRAssistant
+    from config import KorektorConfig
+    
+    def initialize_hr_assistant():
+        config = KorektorConfig.from_env()
+        return HRAssistant(config)
+else:
+    from hr_assistant import HRAssistant
+    
+    def initialize_hr_assistant():
+        return HRAssistant(
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            pdf_directory="pdfs"
+        )
+```
+
+#### 2. Przez Zmienną Środowiskową
+```bash
+export KOREKTOR_USE_V2=true
+python app.py
+```
+
+#### 3. Testowanie Komponentów
+```bash
+# Testy nowej architektury
+python test_refactoring.py
+
+# Przykłady użycia
+python refactoring_examples.py
+
+# Skrypt migracji (tworzy pomocnicze pliki)
+python migrate_to_v2.py
+```
+
+### ✨ Korzyści Nowej Architektury
+
+- **🏗️ Modularna Struktura:** Oddzielne komponenty dla dokumentów, konfiguracji i logiki
+- **🧪 Łatwiejsze Testowanie:** 14 testów jednostkowych, możliwość mockowania
+- **⚙️ Centralna Konfiguracja:** Wszystkie parametry w `config.py` z walidacją
+- **🔄 Kompatybilność Wsteczna:** Identyczne API - istniejący kod działa bez zmian
+- **🚀 Przygotowanie na Przyszłość:** Async processing, event system, caching
+
+### 📋 Pliki Związane z Refaktoryzacją
+
+- `hr_assistant_v2.py` - Nowa implementacja asystenta
+- `document_manager.py` - Zarządzanie dokumentami
+- `config.py` - Centralna konfiguracja
+- `test_refactoring.py` - Testy nowej architektury
+- `refactoring_examples.py` - Przykłady użycia
+- `migrate_to_v2.py` - Narzędzia migracji
+- `REFACTORING_PROPOSALS.md` - Szczegółowa analiza zmian
+
+---
+
+## �🔧 Konfiguracja
 
 ### Zmienne Środowiskowe
 ```bash

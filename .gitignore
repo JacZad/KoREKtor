@@ -67,3 +67,4 @@ logs/
 *.tmp
 *.temp
 temp/
+__pycache__/hr_assistant.cpython-312.pyc

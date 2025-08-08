@@ -2,6 +2,63 @@
 
 Wszystkie istotne zmiany w projekcie KoREKtor są dokumentowane w tym pliku.
 
+# 📝 Changelog - KoREKtor
+
+---
+
+## [2.1.1] - 2025-08-08
+
+### 🐛 Poprawki
+- **Naprawiono duplikację informacji o numerze strony w źródłach PDF**: Usunięto podwójne wyświetlanie numeru strony (np. "str. 5 - _Strona 5_")
+- Dodano warunek wykrywający sekcje zawierające tylko informację o numerze strony
+- Dodano test jednostkowy `test_source_formatting_fix.py` zabezpieczający przed regresją błędu
+
+### 🧪 Testy
+- Nowy test sprawdzający formatowanie źródeł: 5 testów units covering different scenarios
+- Testy weryfikują poprawne formatowanie PDF, URL i mieszanych źródeł
+
+## [2.1.0] - 2025-08-08
+
+### 🏗️ Refaktoryzacja Architektury
+
+#### ✨ Nowe Komponenty
+- **DocumentManager** - Dedykowana klasa do zarządzania dokumentami PDF i URL
+- **KorektorConfig** - Centralna konfiguracja z walidacją i obsługą zmiennych środowiskowych
+- **HRAssistantV2** - Zrefaktoryzowana implementacja z lepszą separacją odpowiedzialności
+
+#### 🧪 Testowanie
+- **14 testów jednostkowych** - Kompleksowe testy dla nowych komponentów
+- **Konfiguracja testowa** - Specjalny tryb `KorektorConfig.for_testing()`
+- **Mockowanie komponentów** - Możliwość izolowanego testowania
+
+#### 🔧 Ulepszenia Konfiguracji
+- **Zmienne środowiskowe** - Konfiguracja przez `KOREKTOR_*` zmienne
+- **Walidacja parametrów** - Automatyczne sprawdzanie poprawności konfiguracji
+- **Tryby konfiguracji** - Development, testing, production
+
+#### 🔄 Kompatybilność
+- **Zachowane API** - Pełna kompatybilność wsteczna z wersją 1
+- **Stopniowa migracja** - Możliwość przełączania między wersjami
+- **Dokumentacja migracji** - Szczegółowe instrukcje przejścia
+
+#### 🎯 Korzyści
+- Kod bardziej czytelny i maintainable
+- Łatwiejsze dodawanie nowych funkcji
+- Lepsze obsługa błędów
+- Przygotowanie pod async processing
+
+### 🔗 Klikalne Linki URL
+- **Formatowanie źródeł** - URL wyświetlane jako klikalne linki z czystymi tytułami
+- **Czyszczenie tytułów** - Usuwanie długich nazw PFRON z tytułów stron
+- **Markdown support** - Linki w formacie `[Tytuł](URL)`
+
+### 📊 Monitoring i Cache
+- **Cache bazy wektorowej** - Optymalizacja dla dużych baz danych
+- **Statystyki wydajności** - Monitoring rozmiaru i wydajności (18.05 MB, kategoria: mała)
+- **Rekomendacje** - Automatyczne sugestie optymalizacji
+
+---
+
 ## [2.0.0] - 2025-08-06
 
 ### ✨ Nowe Funkcje

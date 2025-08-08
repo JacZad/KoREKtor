@@ -261,7 +261,8 @@ def ask_hr_assistant(question):
                     source_text = f"{i}. {bibliography}"
                     if page and page != '?':
                         source_text += f", str. {page}"
-                    if section and section != bibliography and section:
+                    # Nie dodawaj sekcji jeśli to tylko informacja o numerze strony (duplikacja)
+                    if section and section != bibliography and section and not section.startswith(f"Strona {page}"):
                         source_text += f" - _{section}_"
                 
                 answer += source_text + "\n"
