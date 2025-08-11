@@ -117,7 +117,8 @@ else:
 ### Konfiguracja przez Zmienne Środowiskowe
 
 ```bash
-# .env file
+# .env file (zmienne środowiskowe)
+OPENAI_API_KEY=twój_klucz_api_openai            # Klucz API OpenAI
 KOREKTOR_PDF_DIRECTORY=./custom_pdfs
 KOREKTOR_CHUNK_SIZE=1500
 KOREKTOR_LLM_MODEL=gpt-4

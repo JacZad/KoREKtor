@@ -82,10 +82,14 @@ To interaktywny chatbot oparty na wiedzy z wbudowanej bazy dokumentów (poradnik
    pip install -r requirements.txt
    ```
 
-4. **Ustawienie Klucza API OpenAI:**
-   
+4. **Ustawienie Klucza API OpenAI (zmienna środowiskowa):**
+
    ```bash
-   export OPENAI_API_KEY="twój_klucz_api_openai"
+   export OPENAI_API_KEY="twój_klucz_api_openai"        # macOS/Linux
+   # Windows PowerShell:
+   $env:OPENAI_API_KEY="twój_klucz_api_openai"
+   # Windows CMD:
+   set OPENAI_API_KEY="twój_klucz_api_openai"
    ```
 
 5. **Uruchomienie Aplikacji:**
