@@ -4,7 +4,7 @@
 
 ### Komponenty Główne
 
-```
+```plaintext
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │    Frontend     │    │    Backend      │    │   Baza Wiedzy   │
 │   (Gradio UI)   │◄──►│   (app.py)      │◄──►│     (PDFs)      │
@@ -25,7 +25,7 @@
 
 ### Architektura v2.1 (Zrefaktoryzowana)
 
-```
+```plaintext
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │    Frontend     │    │    Backend      │    │   Config        │
 │   (Gradio UI)   │◄──►│   (app.py)      │◄──►│  (config.py)    │
@@ -43,21 +43,23 @@
             │DocumentMgr   │ │VectorDB │ │Conversation  │
             │(docs+URLs)   │ │(FAISS)  │ │Memory        │
             └──────────────┘ └─────────┘ └──────────────┘
-```
+```plaintext
 
-## 📂 Struktura Kodu
+## 📂 Struktura Kodu - Migracja
 
 ### 🚀 Przewodnik Migracji v1 → v2.1
 
 ### Korzyści Nowej Architektury
 
 #### 📈 Metryki Poprawy
+
 - **Redukcja złożoności**: Główna klasa z 377 → 250 linii (-34%)
 - **Testowalność**: Z 0 → 14 testów jednostkowych
 - **Separacja odpowiedzialności**: 1 monolityczna klasa → 3 specjalizowane komponenty
 - **Konfiguracja**: Rozproszona → scentralizowana w jednym miejscu
 
 #### 🎯 Zalety Funkcjonalne
+
 - **Łatwiejsze debugowanie**: Wyizolowane komponenty
 - **Szybsze rozwój**: Modułowa architektura
 - **Lepsze testowanie**: Każdy komponent osobno
@@ -66,6 +68,7 @@
 ### Opcje Migracji
 
 #### 🔄 Opcja 1: Stopniowa Migracja (Zalecana)
+
 ```python
 # Krok 1: Użyj v2 równolegle
 from hr_assistant import HRAssistant as HRAssistantV1
@@ -84,9 +87,10 @@ answer_v2 = assistant_v2.ask(question)
 
 # Krok 4: Gdy zadowolony, przełącz import
 # from hr_assistant_v2 import HRAssistantV2 as HRAssistant
-```
+```plaintext
 
 #### ⚡ Opcja 2: Szybka Migracja
+
 ```python
 # W app.py zastąp:
 # from hr_assistant import HRAssistant
@@ -98,9 +102,10 @@ from config import KorektorConfig
 
 config = KorektorConfig.from_env()
 hr_assistant = HRAssistantV2(config)
-```
+```plaintext
 
 #### 🧪 Opcja 3: A/B Testing
+
 ```python
 # Użyj zmiennej środowiskowej
 import os
@@ -112,7 +117,7 @@ if os.getenv("USE_HR_V2", "false").lower() == "true":
 else:
     from hr_assistant import HRAssistant
     hr_assistant = HRAssistant()
-```
+   ```bash
 
 ### Konfiguracja przez Zmienne Środowiskowe
 
@@ -137,6 +142,7 @@ assistant = HRAssistantV2(config)
 ### Testowanie Migracji
 
 #### Uruchomienie Testów
+
 ```bash
 # Testy jednostkowe nowej architektury
 python -m pytest test_refactoring.py -v
@@ -149,6 +155,7 @@ python migrate_to_v2.py
 ```
 
 #### Weryfikacja Kompatybilności
+
 ```python
 # Test identyczności API
 from test_refactoring import TestIntegration
@@ -158,9 +165,10 @@ test.test_v2_maintains_v1_compatibility()  # Sprawdza kompatybilność API
 
 ---
 
-## 📂 Struktura Kodu
+## 📂 Struktura Kodu - Szczegóły
 
 ### `app.py` - Główna Aplikacja
+
 ```python
 # Główne funkcje:
 - initialize_hr_assistant()      # Inicjalizacja przy starcie
@@ -170,6 +178,7 @@ test.test_v2_maintains_v1_compatibility()  # Sprawdza kompatybilność API
 ```
 
 ### `hr_assistant.py` - Silnik AI
+
 ```python
 class HRAssistant:
     # Główne metody:
@@ -181,6 +190,7 @@ class HRAssistant:
 ```
 
 ### `IntelligentPDFChunker` - Przetwarzanie PDF
+
 ```python
 class IntelligentPDFChunker:
     - _extract_pdf_structure()     # Ekstrakcja z zachowaniem struktury
@@ -188,9 +198,8 @@ class IntelligentPDFChunker:
     - _detect_structure_markers()  # Wykrywanie nagłówków
 ```
 
-### Architektura v2.1 (Zrefaktoryzowana)
-
 ### `config.py` - Centralna Konfiguracja
+
 ```python
 @dataclass
 class KorektorConfig:
@@ -207,6 +216,7 @@ class KorektorConfig:
 ```
 
 ### `document_manager.py` - Zarządzanie Dokumentami
+
 ```python
 class DocumentManager:
     # Odpowiedzialności:
@@ -218,6 +228,7 @@ class DocumentManager:
 ```
 
 ### `hr_assistant_v2.py` - Zrefaktoryzowany Asystent
+
 ```python
 class HRAssistantV2:
     # Ulepszona architektura:
@@ -229,6 +240,7 @@ class HRAssistantV2:
 ```
 
 ### `test_refactoring.py` - Testy Jednostkowe
+
 ```python
 # Klasy testowe:
 class TestKorektorConfig:         # Testy konfiguracji
@@ -245,6 +257,7 @@ class TestIntegration:           # Testy integracyjne
 ## 🔧 Kluczowe Mechanizmy
 
 ### 1. Ładowanie Bibliografii
+
 ```python
 def _load_bibliography(self) -> Dict[str, str]:
     """
@@ -256,6 +269,7 @@ def _load_bibliography(self) -> Dict[str, str]:
 ```
 
 ### 2. Cache'owanie Dokumentów
+
 ```python
 # Zmienne śledzące stan plików PDF:
 self._known_pdfs = set()      # Nazwy znanych plików
@@ -267,6 +281,7 @@ def _pdfs_changed(self) -> bool:
 ```
 
 ### 3. Metadane Dokumentów
+
 ```python
 doc.metadata = {
     "filename": "dokument.pdf",
@@ -278,6 +293,7 @@ doc.metadata = {
 ```
 
 ### 4. Formatowanie Źródeł
+
 ```python
 def ask_hr_assistant(question):
     # Nowy format źródeł:
@@ -290,21 +306,24 @@ def ask_hr_assistant(question):
 ## 📊 Przepływ Danych
 
 ### 1. Inicjalizacja Systemu
-```
+
+```text
 Start → Ładowanie bibliografia.csv → Skanowanie PDFs → 
 Ekstrakcja tekstu → Chunking → Embeddings → 
 Tworzenie FAISS → Ready
 ```
 
 ### 2. Zapytanie do Asystenta
-```
+
+```text
 Pytanie → Embedding → Similarity Search → 
 Retrieval → LLM (GPT-4o-mini) → 
 Format Answer + Sources → Response
 ```
 
 ### 3. Analiza Ogłoszenia
-```
+
+```text
 Tekst/Plik → Ekstrakcja → Walidacja → 
 Analiza LLM → Przetwarzanie → 
 Generowanie Raportów → JSON Output
@@ -313,6 +332,7 @@ Generowanie Raportów → JSON Output
 ## 🐛 Debugowanie
 
 ### Logi Systemu
+
 ```bash
 # Włączenie logów debug:
 export PYTHONPATH=$PYTHONPATH:.
@@ -323,24 +343,31 @@ python app.py
 ### Typowe Problemy
 
 1. **Brak OPENAI_API_KEY**
-   ```
+
+   ```text
    ValueError: Brak klucza OPENAI_API_KEY
    ```
+
    Rozwiązanie: `export OPENAI_API_KEY="sk-..."`
 
 2. **Brak pliku bibliografia.csv**
-   ```
+
+   ```text
    WARNING: Plik bibliografia.csv nie istnieje
    ```
+
    System będzie używał nazw plików jako fallback.
 
 3. **Błąd ładowania PDF**
-   ```
+
+   ```text
    ERROR: Błąd podczas przetwarzania PDF
    ```
+
    Sprawdź format i uszkodzenia pliku PDF.
 
 ### Narzędzia Diagnostyczne
+
 ```python
 # W hr_assistant.py dostępne komendy:
 assistant.get_stats()          # Statystyki systemu
@@ -351,6 +378,7 @@ assistant.reload_knowledge_base()  # Ręczne przeładowanie
 ## 🧪 Testowanie
 
 ### Unit Testy
+
 ```bash
 # Uruchomienie testów:
 python -m pytest tests/
@@ -364,6 +392,7 @@ print(assistant.get_stats())
 ```
 
 ### Testy Integracyjne
+
 ```python
 # Test pełnego pipeline'u:
 response = assistant.ask('Test pytanie')
@@ -375,11 +404,13 @@ assert len(response['sources']) > 0
 ## 🔒 Bezpieczeństwo
 
 ### Klucze API
+
 - Nigdy nie commituj kluczy do repozytorium
 - Używaj zmiennych środowiskowych
 - Rotuj klucze regularnie
 
 ### Walidacja Danych
+
 ```python
 # Sprawdzanie typu pliku:
 ALLOWED_EXTENSIONS = ['.pdf', '.docx']
@@ -390,16 +421,19 @@ if file_extension not in ALLOWED_EXTENSIONS:
 ## 📈 Optymalizacja
 
 ### Wydajność
+
 - Baza wiedzy ładowana raz przy starcie
-- Cache'owanie przetworzonch dokumentów
+- Cache'owanie przetworzonych dokumentów
 - Efektywne chunking z zachowaniem kontekstu
 
 ### Pamięć
+
 - FAISS przechowuje embeddingi w RAM
 - Chunki mają ograniczony rozmiar (1000 znaków)
 - Automatyczne zarządzanie pamięcią konwersacji (ostatnie 5 wiadomości)
 
 ### Monitoring
+
 ```python
 # Sprawdzanie zużycia zasobów:
 stats = assistant.get_stats()
@@ -411,26 +445,15 @@ print(f"Pamięć rozmów: {stats['memory_messages']}")
 ## 🚀 Deployment
 
 ### Lokalne Uruchomienie
+
 ```bash
-# Development:
 python app.py
-
-# Production:
-gunicorn app:demo -w 4 -b 0.0.0.0:7860
 ```
 
-### Docker (przygotowanie)
-```dockerfile
-FROM python:3.11-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY . .
-EXPOSE 7860
-CMD ["python", "app.py"]
-```
+Aplikacja jest uruchamiana w domyślnym interfejsie Gradio. Jest w pełni funkcjonalny, poza tym że raport jest wyświetlany w formacie JSON, który może nie być czytelny dla człowieka. Zalecamy wykorzystać endpointy Gradio do przygotowania własnego interfejsu.
 
 ### Zmienne Środowiskowe
+
 ```bash
 OPENAI_API_KEY=sk-...          # Wymagane
 GRADIO_SERVER_NAME=0.0.0.0     # Opcjonalne

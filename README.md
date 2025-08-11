@@ -33,23 +33,27 @@ To interaktywny chatbot oparty na wiedzy z wbudowanej bazy dokumentów (poradnik
 ## 🚀 Najnowsze Funkcje (v2.0)
 
 ### ✨ Inteligentne Cytowanie Źródeł
+
 - **📖 Pełne Opisy Bibliograficzne:** System automatycznie ładuje pełne cytowania z pliku `bibliografia.csv`
 - **🔍 Precyzyjne Lokalizacje:** Każde źródło zawiera dokładny numer strony i sekcję dokumentu
 - **🎯 Czytelne Formatowanie:** Źródła wyświetlane są w eleganckim formacie bez fragmentów tekstu
 - **🔗 Klikalne Linki URL:** Źródła internetowe wyświetlane jako klikalne linki z czystymi tytułami
 
 ### ⚡ Optymalizacja Wydajności
+
 - **🚫 Koniec Ponownego Ładowania:** Baza wiedzy jest tworzona tylko raz przy starcie aplikacji
 - **🔄 Inteligentne Cache'owanie:** System pamięta przetworzony stan dokumentów PDF
 - **📊 Monitoring Zmian:** Opcjonalne ręczne przeładowanie przy dodaniu nowych dokumentów
 - **💾 Statystyki Bazy Wektorowej:** Monitoring rozmiaru i wydajności bazy (18.05 MB, kategoria: mała)
 
 ### 📚 Zarządzanie Bibliografią
+
 - **📋 Centralna Baza Opisów:** Plik `bibliografia.csv` zawiera pełne opisy wszystkich dokumentów
 - **🔧 Łatwa Aktualizacja:** Wystarczy edytować plik CSV aby zmienić cytowania
 - **📖 Profesjonalne Standardy:** Zgodność z akademickimi standardami cytowania
 
 ### 🏗️ Refaktoryzacja Architektury (v2.1)
+
 - **🔧 Modularna Struktura:** Kod podzielony na specjalizowane komponenty (DocumentManager, Config)
 - **🧪 Łatwiejsze Testowanie:** 14 testów jednostkowych, możliwość mockowania komponentów
 - **⚙️ Centralna Konfiguracja:** Wszystkie parametry w jednym miejscu z walidacją
@@ -61,14 +65,14 @@ To interaktywny chatbot oparty na wiedzy z wbudowanej bazy dokumentów (poradnik
 ## ⚡ Jak Uruchomić
 
 1. **Klonowanie Repozytorium:**
-   
+
    ```bash
-   git clone [URL_REPOZYTORIUM]
-   cd korektor2
+   git clone https://github.com/jaczad/korektor
+   cd korektor
    ```
 
 2. **Utworzenie i Aktywacja Środowiska Wirtualnego:**
-   
+
    ```bash
    python -m venv venv
    source venv/bin/activate  # macOS/Linux
@@ -77,7 +81,7 @@ To interaktywny chatbot oparty na wiedzy z wbudowanej bazy dokumentów (poradnik
    ```
 
 3. **Instalacja Zależności:**
-   
+
    ```bash
    pip install -r requirements.txt
    ```
@@ -93,11 +97,11 @@ To interaktywny chatbot oparty na wiedzy z wbudowanej bazy dokumentów (poradnik
    ```
 
 5. **Uruchomienie Aplikacji:**
-   
+
    ```bash
    python app.py
    ```
-   
+
 6. **Otwórz Przeglądarkę:** Przejdź pod adres `http://localhost:7860`
 
 ---
@@ -108,15 +112,15 @@ To interaktywny chatbot oparty na wiedzy z wbudowanej bazy dokumentów (poradnik
 
 Po uruchomieniu aplikacji w przeglądarce pojawią się dwa główne narzędzia:
 
--   **Analizator Ogłoszeń:**
-    1.  Wklej tekst ogłoszenia w pole tekstowe lub przeciągnij plik PDF/DOCX.
-    2.  Kliknij przycisk **"Analizuj"**.
-    3.  Wyniki pojawią się w formacie JSON, a poniżej będą dostępne linki do pobrania raportów.
+- **Analizator Ogłoszeń:**
+    1. Wklej tekst ogłoszenia w pole tekstowe lub przeciągnij plik PDF/DOCX.
+    2. Kliknij przycisk **"Analizuj"**.
+    3. Wyniki pojawią się w formacie JSON, a poniżej będą dostępne linki do pobrania raportów.
 
--   **Asystent HR:**
-    1.  Wpisz swoje pytanie w polu tekstowym.
-    2.  Kliknij **"Wyślij"**.
-    3.  Odpowiedź wraz ze źródłami pojawi się poniżej.
+- **Asystent HR:**
+    1. Wpisz swoje pytanie w polu tekstowym.
+    2. Kliknij **"Wyślij"**.
+    3. Odpowiedź wraz ze źródłami pojawi się poniżej.
 
 ### Dostęp przez API (Gradio)
 
@@ -127,6 +131,7 @@ Aplikacja Gradio automatycznie udostępnia API, które pozwala na zdalne wywoły
 Funkcja `analyze_job_ad` przyjmuje dwa argumenty: tekst ogłoszenia i opcjonalnie plik. Zwraca trzy wartości: JSON z wynikami, plik z pełnym raportem i plik ze skróconym raportem.
 
 **Przykład użycia `curl` (wysyłanie tekstu):**
+
 ```bash
 curl -X POST http://127.0.0.1:7860/run/predict \
 -H "Content-Type: application/json" \
@@ -139,6 +144,7 @@ curl -X POST http://127.0.0.1:7860/run/predict \
 ```
 
 **Przykład użycia w Pythonie (`requests`):**
+
 ```python
 import requests
 import json
@@ -172,6 +178,7 @@ else:
 Funkcja `ask_hr_assistant` przyjmuje jeden argument: pytanie w formie tekstowej. Zwraca odpowiedź w formacie Markdown.
 
 **Przykład użycia `curl`:**
+
 ```bash
 curl -X POST http://127.0.0.1:7860/run/predict \
 -H "Content-Type: application/json" \
@@ -183,6 +190,7 @@ curl -X POST http://127.0.0.1:7860/run/predict \
 ```
 
 **Przykład użycia w Pythonie (`requests`):**
+
 ```python
 import requests
 
@@ -207,7 +215,7 @@ else:
 
 ## Struktura Projektu
 
-```
+```text
 /Users/jacek/korektor2/
 ├── app.py                    # Główny plik aplikacji Gradio
 ├── hr_assistant.py           # Logika asystenta HR (wersja oryginalna)
@@ -239,7 +247,8 @@ else:
 - **`template.docx`**: Szablon Microsoft Word używany do generowania raportów analizy ogłoszeń.
 - **`pdfs/`**: Katalog zawierający dokumenty bazy wiedzy (poradniki, raporty, przepisy prawne).
 
-### Przykład `bibliografia.csv`:
+### Przykład `bibliografia.csv`
+
 ```csv
 opis;filename
 "Gruszczyńska A., Gruntowski M., Osoba z niepełnosprawnością w Twojej firmie, Fundacja Aktywizacja, Warszawa 2024";Niezbednik-pracodawcy-online.pdf
@@ -276,6 +285,7 @@ KoREKtor oferuje zrefaktoryzowaną architekturę (v2.1) z lepszą modularyzacją
 ### 🎯 Opcje Przełączenia
 
 #### 1. Stopniowe Przejście (Zalecane)
+
 ```python
 # W app.py - dodaj na górze:
 USE_NEW_ARCHITECTURE = False  # Ustaw True gdy chcesz przełączyć
@@ -298,12 +308,14 @@ else:
 ```
 
 #### 2. Przez Zmienną Środowiskową
+
 ```bash
 export KOREKTOR_USE_V2=true
 python app.py
 ```
 
 #### 3. Testowanie Komponentów
+
 ```bash
 # Testy nowej architektury
 python test_refactoring.py
@@ -338,12 +350,14 @@ python migrate_to_v2.py
 ## �🔧 Konfiguracja
 
 ### Zmienne Środowiskowe
+
 ```bash
 export OPENAI_API_KEY="sk-..." # Klucz API OpenAI (wymagany)
 ```
 
 ### Struktura Katalogów
-```
+
+```text
 pdfs/           # Dokumenty bazy wiedzy (PDF)
 ├── dokument1.pdf
 ├── dokument2.pdf
@@ -351,6 +365,7 @@ pdfs/           # Dokumenty bazy wiedzy (PDF)
 ```
 
 ### Pliki Konfiguracyjne
+
 ## 📚 Dokumentacja
 
 - **`README.md`** - Ten plik - główny przewodnik użytkownika
@@ -361,6 +376,7 @@ pdfs/           # Dokumenty bazy wiedzy (PDF)
 ## 🤝 Wsparcie
 
 W przypadku problemów lub pytań:
+
 1. Sprawdź sekcję **Debugowanie** w `DEVELOPER.md`
 2. Przejrzyj **Changelog** w `CHANGELOG.md`
 3. Sprawdź logi aplikacji w konsoli

@@ -68,3 +68,5 @@ logs/
 *.temp
 temp/
 __pycache__/hr_assistant.cpython-312.pyc
+dla_deweloperow.docx
+dokument_techniczny.docx
