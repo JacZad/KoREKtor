@@ -1,6 +1,13 @@
 # KoREKtor: Analizator Dostępności Ogłoszeń i Asystent HR
 
-**KoREKtor** to zaawansowane narzędzie zaprojektowane, aby wspierać pracodawców w tworzeniu bardziej inkluzywnych i dostępnych miejsc pracy dla osób z niepełnosprawnościami. Aplikacja składa się z dwóch głównych modułów dostarczanych w jednym, łatwym w obsłudze interfejsie webowym.
+[![Language: Polish](https://img.shields.io/badge/język-polski-red.svg)](https://github.com/JacZad/KoREKtor)
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+
+> **🇵🇱 Projekt polskojęzyczny** | This project is in Polish  
+> Narzędzia, dokumentacja i interfejs użytkownika są w języku polskim.
+
+**KoREKtor** to zaawansowane narzędzie zaprojektowane, aby wspierać pracodawców w tworzeniu bardziej inkluzywnych i dostępnych miejsc pracy dla osób z niepełnosprawnościami. Aplikacja składa się z dwóch głównych modułów: **Analizatora Ogłoszeń o Pracę** oraz **Asystenta HR**.
 
 ![Logo](logo-korektor.png)
 
@@ -10,7 +17,7 @@
 
 ### 1. 📋 Analizator Ogłoszeń o Pracę
 
-Moduł ten pozwala na automatyczną analizę ogłoszeń o pracę pod kątem ich dostępności i potencjalnych barier dla kandydatów z niepełnosprawnościami. Użytkownik może wkleić tekst ogłoszenia lub wgrać plik w formacie PDF/DOCX.
+Moduł ten pozwala na automatyczną analizę ogłoszeń o pracę pod kątem ich dostępności i potencjalnych barier dla kandydatów z niepełnosprawnościami. Użytkownik może wkleić tekst ogłoszenia lub przesłać plik PDF/DOCX. System dokonuje analizy zgodnie z matrycą kryteriów (plik `matryca.csv`), a następnie generuje szczegółowe raporty.
 
 - **🧠 Inteligentna Analiza:** Wykorzystuje duży model językowy (LLM) do oceny treści na podstawie predefiniowanej matrycy kryteriów.
 - **📄 Generowanie Raportów:** Tworzy dwa rodzaje raportów w formacie `.docx`:
@@ -20,7 +27,7 @@ Moduł ten pozwala na automatyczną analizę ogłoszeń o pracę pod kątem ich 
 
 ### 2. 🤖 Asystent HR
 
-To interaktywny chatbot oparty na wiedzy z wbudowanej bazy dokumentów (poradników, raportów, dobrych praktyk) **oraz aktualnych informacji ze stron internetowych PFRON**. Asystent odpowiada na pytania związane z zatrudnianiem, rekrutacją i zarządzaniem pracownikami z niepełnosprawnościami w Polsce.
+To interaktywny chatbot oparty na wiedzy z wbudowanej bazy dokumentów (poradników, raportów, dobrych praktyk) **oraz aktualnych informacji ze stron internetowych PFRON**. Asystent odpowiada na pytania dotyczące zatrudniania osób z niepełnosprawnościami, obowiązków prawnych, dobrych praktyk HR, dostępności i innych tematów związanych z inkluzywnym miejscem pracy.
 
 - **📚 Baza Wiedzy:** Opiera się na starannie wyselekcjonowanych plikach PDF z pełną bibliografią **oraz treściach ze stron PFRON**
 - **🌐 Aktualne Informacje:** Automatycznie ładuje treści z 21 stron PFRON z pliku `urls.txt`
@@ -65,14 +72,14 @@ To interaktywny chatbot oparty na wiedzy z wbudowanej bazy dokumentów (poradnik
 ## ⚡ Jak Uruchomić
 
 1. **Klonowanie Repozytorium:**
-
+   
    ```bash
    git clone https://github.com/jaczad/korektor
    cd korektor
    ```
 
 2. **Utworzenie i Aktywacja Środowiska Wirtualnego:**
-
+   
    ```bash
    python -m venv venv
    source venv/bin/activate  # macOS/Linux
@@ -81,13 +88,13 @@ To interaktywny chatbot oparty na wiedzy z wbudowanej bazy dokumentów (poradnik
    ```
 
 3. **Instalacja Zależności:**
-
+   
    ```bash
    pip install -r requirements.txt
    ```
 
 4. **Ustawienie Klucza API OpenAI (zmienna środowiskowa):**
-
+   
    ```bash
    export OPENAI_API_KEY="twój_klucz_api_openai"        # macOS/Linux
    # Windows PowerShell:
@@ -97,7 +104,7 @@ To interaktywny chatbot oparty na wiedzy z wbudowanej bazy dokumentów (poradnik
    ```
 
 5. **Uruchomienie Aplikacji:**
-
+   
    ```bash
    python app.py
    ```
@@ -135,12 +142,7 @@ Funkcja `analyze_job_ad` przyjmuje dwa argumenty: tekst ogłoszenia i opcjonalni
 ```bash
 curl -X POST http://127.0.0.1:7860/run/predict \
 -H "Content-Type: application/json" \
--d '{
-  "data": [
-    "Treść przykładowego ogłoszenia o pracę...",
-    null
-  ]
-}'
+-d '{"data": ["Treść przykładowego ogłoszenia o pracę...", null]}'
 ```
 
 **Przykład użycia w Pythonie (`requests`):**
@@ -182,11 +184,7 @@ Funkcja `ask_hr_assistant` przyjmuje jeden argument: pytanie w formie tekstowej.
 ```bash
 curl -X POST http://127.0.0.1:7860/run/predict \
 -H "Content-Type: application/json" \
--d '{
-  "data": [
-    "Jakie są obowiązki pracodawcy wobec pracownika z niepełnosprawnością?"
-  ]
-}'
+-d '{"data": ["Jakie są obowiązki pracodawcy wobec pracownika z niepełnosprawnością?"]}'
 ```
 
 **Przykład użycia w Pythonie (`requests`):**
@@ -278,7 +276,7 @@ Projekt korzysta z następujących głównych bibliotek (pełna lista w `require
 
 ---
 
-## � Migracja na Nową Architekturę
+## 🔄 Migracja na Nową Architekturę
 
 KoREKtor oferuje zrefaktoryzowaną architekturę (v2.1) z lepszą modularyzacją i testowalnocią, zachowując pełną kompatybilność wsteczną.
 
@@ -347,7 +345,7 @@ python migrate_to_v2.py
 
 ---
 
-## �🔧 Konfiguracja
+## 🔧 Konfiguracja
 
 ### Zmienne Środowiskowe
 
@@ -365,7 +363,6 @@ pdfs/           # Dokumenty bazy wiedzy (PDF)
 ```
 
 ### Pliki Konfiguracyjne
-
 ## 📚 Dokumentacja
 
 - **`README.md`** - Ten plik - główny przewodnik użytkownika
@@ -383,4 +380,13 @@ W przypadku problemów lub pytań:
 
 ## 📄 Licencja
 
-CC-BY-SA-4.0 - szczegóły w pliku LICENSE
+Ten projekt jest udostępniany na licencji **Creative Commons Attribution 4.0 International (CC-BY 4.0)**.
+
+**Autorzy:** Jacek Zadrożny, Agata Gawska  
+**Copyright © 2025**
+
+Szczegóły w pliku [LICENSE](LICENSE).
+
+## 🏷️ Tagi
+
+`polski` `polish` `accessibility` `hr-assistant` `inclusivity` `nlp` `ai` `chatbot` `langchain` `gradio`
